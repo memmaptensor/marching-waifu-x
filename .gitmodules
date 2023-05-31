@@ -1,0 +1,3 @@
+[submodule "ext/Real-ESRGAN"]
+	path = ext/Real-ESRGAN
+	url = https://github.com/xinntao/Real-ESRGAN.git
