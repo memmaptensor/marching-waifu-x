@@ -11,29 +11,28 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import json
+import os
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple, Union
-import os
-import json
 
 import torch
+from diffusers import ModelMixin
+from diffusers.configuration_utils import ConfigMixin, register_to_config
+from diffusers.models.cross_attention import AttnProcessor
+from diffusers.models.embeddings import TimestepEmbedding, Timesteps
+from diffusers.models.unet_2d_condition import UNet2DConditionModel
+from diffusers.utils import BaseOutput, logging
 from torch import nn
 from torch.nn import functional as F
 
-from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.utils import BaseOutput, logging
-from diffusers.models.embeddings import TimestepEmbedding, Timesteps
-from diffusers import ModelMixin
-from .controlnet_unet_blocks import (
+from src.controlvideo.controlnet_unet_blocks import (
     CrossAttnDownBlock3D,
     DownBlock3D,
     UNetMidBlock3DCrossAttn,
     get_down_block,
 )
-from .resnet import InflatedConv3d
-
-from diffusers.models.unet_2d_condition import UNet2DConditionModel
-from diffusers.models.cross_attention import AttnProcessor
+from src.controlvideo.resnet import InflatedConv3d
 
 logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
@@ -62,18 +61,31 @@ class ControlNetConditioningEmbedding(nn.Module):
     ):
         super().__init__()
 
-        self.conv_in = InflatedConv3d(conditioning_channels, block_out_channels[0], kernel_size=3, padding=1)
+        self.conv_in = InflatedConv3d(
+            conditioning_channels, block_out_channels[0], kernel_size=3, padding=1
+        )
 
         self.blocks = nn.ModuleList([])
 
         for i in range(len(block_out_channels) - 1):
             channel_in = block_out_channels[i]
             channel_out = block_out_channels[i + 1]
-            self.blocks.append(InflatedConv3d(channel_in, channel_in, kernel_size=3, padding=1))
-            self.blocks.append(InflatedConv3d(channel_in, channel_out, kernel_size=3, padding=1, stride=2))
+            self.blocks.append(
+                InflatedConv3d(channel_in, channel_in, kernel_size=3, padding=1)
+            )
+            self.blocks.append(
+                InflatedConv3d(
+                    channel_in, channel_out, kernel_size=3, padding=1, stride=2
+                )
+            )
 
         self.conv_out = zero_module(
-            InflatedConv3d(block_out_channels[-1], conditioning_embedding_channels, kernel_size=3, padding=1)
+            InflatedConv3d(
+                block_out_channels[-1],
+                conditioning_embedding_channels,
+                kernel_size=3,
+                padding=1,
+            )
         )
 
     def forward(self, conditioning):
@@ -132,12 +144,16 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
                 f"Must provide the same number of `block_out_channels` as `down_block_types`. `block_out_channels`: {block_out_channels}. `down_block_types`: {down_block_types}."
             )
 
-        if not isinstance(only_cross_attention, bool) and len(only_cross_attention) != len(down_block_types):
+        if not isinstance(only_cross_attention, bool) and len(
+            only_cross_attention
+        ) != len(down_block_types):
             raise ValueError(
                 f"Must provide the same number of `only_cross_attention` as `down_block_types`. `only_cross_attention`: {only_cross_attention}. `down_block_types`: {down_block_types}."
             )
 
-        if not isinstance(attention_head_dim, int) and len(attention_head_dim) != len(down_block_types):
+        if not isinstance(attention_head_dim, int) and len(attention_head_dim) != len(
+            down_block_types
+        ):
             raise ValueError(
                 f"Must provide the same number of `attention_head_dim` as `down_block_types`. `attention_head_dim`: {attention_head_dim}. `down_block_types`: {down_block_types}."
             )
@@ -146,7 +162,10 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         conv_in_kernel = 3
         conv_in_padding = (conv_in_kernel - 1) // 2
         self.conv_in = InflatedConv3d(
-            in_channels, block_out_channels[0], kernel_size=conv_in_kernel, padding=conv_in_padding
+            in_channels,
+            block_out_channels[0],
+            kernel_size=conv_in_kernel,
+            padding=conv_in_padding,
         )
 
         # time
@@ -180,7 +199,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             # Note that `TimestepEmbedding` is quite general, being mainly linear layers and activations.
             # When used for embedding actual timesteps, the timesteps are first converted to sinusoidal embeddings.
             # As a result, `TimestepEmbedding` can be passed arbitrary vectors.
-            self.class_embedding = TimestepEmbedding(projection_class_embeddings_input_dim, time_embed_dim)
+            self.class_embedding = TimestepEmbedding(
+                projection_class_embeddings_input_dim, time_embed_dim
+            )
         else:
             self.class_embedding = None
 
@@ -233,19 +254,25 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             self.down_blocks.append(down_block)
 
             for _ in range(layers_per_block):
-                controlnet_block = InflatedConv3d(output_channel, output_channel, kernel_size=1)
+                controlnet_block = InflatedConv3d(
+                    output_channel, output_channel, kernel_size=1
+                )
                 controlnet_block = zero_module(controlnet_block)
                 self.controlnet_down_blocks.append(controlnet_block)
 
             if not is_final_block:
-                controlnet_block = InflatedConv3d(output_channel, output_channel, kernel_size=1)
+                controlnet_block = InflatedConv3d(
+                    output_channel, output_channel, kernel_size=1
+                )
                 controlnet_block = zero_module(controlnet_block)
                 self.controlnet_down_blocks.append(controlnet_block)
 
         # mid
         mid_block_channel = block_out_channels[-1]
 
-        controlnet_block = InflatedConv3d(mid_block_channel, mid_block_channel, kernel_size=1)
+        controlnet_block = InflatedConv3d(
+            mid_block_channel, mid_block_channel, kernel_size=1
+        )
         controlnet_block = zero_module(controlnet_block)
         self.controlnet_mid_block = controlnet_block
 
@@ -312,7 +339,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             controlnet.time_embedding.load_state_dict(unet.time_embedding.state_dict())
 
             if controlnet.class_embedding:
-                controlnet.class_embedding.load_state_dict(unet.class_embedding.state_dict())
+                controlnet.class_embedding.load_state_dict(
+                    unet.class_embedding.state_dict()
+                )
 
             controlnet.down_blocks.load_state_dict(unet.down_blocks.state_dict())
             controlnet.mid_block.load_state_dict(unet.mid_block.state_dict())
@@ -330,7 +359,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         # set recursively
         processors = {}
 
-        def fn_recursive_add_processors(name: str, module: torch.nn.Module, processors: Dict[str, AttnProcessor]):
+        def fn_recursive_add_processors(
+            name: str, module: torch.nn.Module, processors: Dict[str, AttnProcessor]
+        ):
             if hasattr(module, "set_processor"):
                 processors[f"{name}.processor"] = module.processor
 
@@ -345,7 +376,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         return processors
 
     # Copied from diffusers.models.unet_2d_condition.UNet2DConditionModel.set_attn_processor
-    def set_attn_processor(self, processor: Union[AttnProcessor, Dict[str, AttnProcessor]]):
+    def set_attn_processor(
+        self, processor: Union[AttnProcessor, Dict[str, AttnProcessor]]
+    ):
         r"""
         Parameters:
             `processor (`dict` of `AttnProcessor` or `AttnProcessor`):
@@ -413,7 +446,11 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             # make smallest slice possible
             slice_size = num_sliceable_layers * [1]
 
-        slice_size = num_sliceable_layers * [slice_size] if not isinstance(slice_size, list) else slice_size
+        slice_size = (
+            num_sliceable_layers * [slice_size]
+            if not isinstance(slice_size, list)
+            else slice_size
+        )
 
         if len(slice_size) != len(sliceable_head_dims):
             raise ValueError(
@@ -430,7 +467,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         # Recursively walk through all the children.
         # Any children which exposes the set_attention_slice method
         # gets the message
-        def fn_recursive_set_attention_slice(module: torch.nn.Module, slice_size: List[int]):
+        def fn_recursive_set_attention_slice(
+            module: torch.nn.Module, slice_size: List[int]
+        ):
             if hasattr(module, "set_attention_slice"):
                 module.set_attention_slice(slice_size.pop())
 
@@ -467,7 +506,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         elif channel_order == "bgr":
             controlnet_cond = torch.flip(controlnet_cond, dims=[1])
         else:
-            raise ValueError(f"unknown `controlnet_conditioning_channel_order`: {channel_order}")
+            raise ValueError(
+                f"unknown `controlnet_conditioning_channel_order`: {channel_order}"
+            )
 
         # prepare attention_mask
         if attention_mask is not None:
@@ -502,7 +543,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
 
         if self.class_embedding is not None:
             if class_labels is None:
-                raise ValueError("class_labels should be provided when num_class_embeds > 0")
+                raise ValueError(
+                    "class_labels should be provided when num_class_embeds > 0"
+                )
 
             if self.config.class_embed_type == "timestep":
                 class_labels = self.time_proj(class_labels)
@@ -520,7 +563,10 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         # 3. down
         down_block_res_samples = (sample,)
         for downsample_block in self.down_blocks:
-            if hasattr(downsample_block, "has_cross_attention") and downsample_block.has_cross_attention:
+            if (
+                hasattr(downsample_block, "has_cross_attention")
+                and downsample_block.has_cross_attention
+            ):
                 sample, res_samples = downsample_block(
                     hidden_states=sample,
                     temb=emb,
@@ -547,7 +593,9 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
 
         controlnet_down_block_res_samples = ()
 
-        for down_block_res_sample, controlnet_block in zip(down_block_res_samples, self.controlnet_down_blocks):
+        for down_block_res_sample, controlnet_block in zip(
+            down_block_res_samples, self.controlnet_down_blocks
+        ):
             down_block_res_sample = controlnet_block(down_block_res_sample)
             controlnet_down_block_res_samples += (down_block_res_sample,)
 
@@ -556,19 +604,22 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         mid_block_res_sample = self.controlnet_mid_block(sample)
 
         # 6. scaling
-        down_block_res_samples = [sample * conditioning_scale for sample in down_block_res_samples]
+        down_block_res_samples = [
+            sample * conditioning_scale for sample in down_block_res_samples
+        ]
         mid_block_res_sample *= conditioning_scale
 
         if not return_dict:
             return (down_block_res_samples, mid_block_res_sample)
 
         return ControlNetOutput(
-            down_block_res_samples=down_block_res_samples, mid_block_res_sample=mid_block_res_sample
+            down_block_res_samples=down_block_res_samples,
+            mid_block_res_sample=mid_block_res_sample,
         )
 
     @classmethod
     def from_pretrained_2d(cls, pretrained_model_path, control_path=None):
-        config_file = os.path.join(pretrained_model_path, 'config.json')
+        config_file = os.path.join(pretrained_model_path, "config.json")
         if not os.path.isfile(config_file):
             raise RuntimeError(f"{config_file} does not exist")
         with open(config_file, "r") as f:
@@ -578,10 +629,11 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             "CrossAttnDownBlock3D",
             "CrossAttnDownBlock3D",
             "CrossAttnDownBlock3D",
-            "DownBlock3D"
+            "DownBlock3D",
         ]
 
         from diffusers.utils import WEIGHTS_NAME
+
         model = cls.from_config(config)
         if control_path is None:
             model_file = os.path.join(pretrained_model_path, WEIGHTS_NAME)
@@ -590,14 +642,14 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             model_file = control_path
             state_dict = torch.load(model_file, map_location="cpu")
             state_dict = {k[14:]: state_dict[k] for k in state_dict.keys()}
-            
-        
+
         for k, v in model.state_dict().items():
-            if '_temp.' in k:
+            if "_temp." in k:
                 state_dict.update({k: v})
         model.load_state_dict(state_dict)
 
         return model
+
 
 def zero_module(module):
     for p in module.parameters():
