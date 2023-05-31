@@ -1,0 +1,22 @@
+[
+    {
+        "checkpoint_path": "../data/models/Nabylon-v1.0-fp16.safetensors",
+        "original_config_file": "../data/models/v1-inference.yaml",
+        "extract_ema": true,
+        "from_safetensors": true,
+        "to_safetensors": true,
+        "dump_path": "../data/models/Nabylon-v1.0-fp16",
+        "device": "cuda:0",
+        "half": true
+    },
+    {
+        "checkpoint_path": "../data/models/Nabylon-v1.0-fp16-inpainting.safetensors",
+        "original_config_file": "../data/models/v1-inpainting-inference.yaml",
+        "extract_ema": true,
+        "from_safetensors": true,
+        "to_safetensors": true,
+        "dump_path": "../data/models/Nabylon-v1.0-fp16-inpainting",
+        "device": "cuda:0",
+        "half": true
+    }
+]

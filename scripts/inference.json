@@ -1,0 +1,46 @@
+{
+    "models": {
+        "ldm_repo_id": "rossiyareich/Nabylon-v1.0-fp16",
+        "ldm_inpaint_repo_id": "rossiyareich/Nabylon-v1.0-fp16-inpainting",
+        "vae_repo_id": "stabilityai/sd-vae-ft-mse"
+    },
+    "controlnet": {
+        "soft_exp": 0.825,
+        "unit_scales": {
+            "openpose": 1.0,
+            "depth": 0.8,
+            "normals": 0.8,
+            "lineart": 0.6
+        },
+        "guidance": {
+            "start": 0.0,
+            "end": 1.0
+        }
+    },
+    "deepdanbooru": {
+        "threshold": 0.08,
+        "multiplier": 1.0,
+        "prefix": "(masterpiece, best quality, {0})+, "
+    },
+    "pipeline": {
+        "prereq": {
+            "prompt": "(masterpiece, best quality, dark background, {0})+, 1girl, white hoodie, earmuffs, leggings, white scarf, black gloves, white socks, short blue hair, blue eyes, bangs",
+            "negative_prompt": "EasyNegative, (worst quality, low quality, logo, text, watermark, username, nsfw), inaccurate hands and fingers",
+            "steps": 20,
+            "cfg_scale": 10,
+            "callback_steps": 5,
+            "denoising_strength": 1.0,
+            "seed": -1
+        },
+        "restgen": {
+            "negative_prompt": "EasyNegative, (worst quality, low quality, logo, text, watermark, username, nsfw), inaccurate hands and fingers",
+            "steps": 20,
+            "cfg_scale": 10,
+            "callback_steps": 0,
+            "denoising_strength": 1.0,
+            "seed": -1,
+            "inpaint_method": "original",
+            "dataset_size": 40
+        }
+    }
+}
