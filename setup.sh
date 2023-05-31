@@ -51,15 +51,15 @@ rm -rf Anaconda3-2023.03-1-Linux-x86_64.sh
 
 # Setup conda env
 eval "$(command conda 'shell.bash' 'hook' 2> /dev/null)"
-conda create -n marching-waifu python=3.10
-conda activate marching-waifu
+conda create -n marching-waifu-x python=3.10
+conda activate marching-waifu-x
 python -m pip install --upgrade pip
 
 # Install 3rd party packages
 pip install gdown ipykernel ipywidgets
 
 # Install PyTorch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 --index-url https://download.pytorch.org/whl/cu116
 
 : '
 # Build instant-ngp

@@ -17,7 +17,7 @@ python -m pip install --upgrade pip
 pip install gdown ipykernel ipywidgets
 
 :: Install PyTorch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch==1.13.1+cu116 torchvision==0.14.1+cu116 --index-url https://download.pytorch.org/whl/cu116
 
 :: Build instant-ngp
 :: ... (TODO)
