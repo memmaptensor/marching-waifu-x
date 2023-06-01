@@ -6,12 +6,8 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import PIL.Image
 import torch
-from diffusers import (
-    ModelMixin,
-    AutoencoderKL,
-    DiffusionPipeline,
-    logging,
-)
+import torchvision
+from diffusers import AutoencoderKL, DiffusionPipeline, ModelMixin, logging
 from diffusers.loaders import LoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL
 from diffusers.pipeline_utils import DiffusionPipeline
@@ -767,7 +763,6 @@ class ControlVideoPipeline(
             inter_frame_list.append(s[1:].tolist())
         return key_frame_indices, inter_frame_list
 
-
     @torch.no_grad()
     def generate_long_video(
         self,
@@ -1178,7 +1173,15 @@ class ControlVideoPipeline(
         if output_type == "tensor":
             video = torch.from_numpy(video)
         elif output_type == "pil":
-            video = self.numpy_to_pil(video)
+            video = torch.from_numpy(video)
+            video = rearrange(video, "b c t h w -> t b c h w")
+            outputs = []
+            for x in video:
+                x = torchvision.utils.make_grid(x, nrow=n_rows)
+                x = x.transpose(0, 1).transpose(1, 2).squeeze(-1)
+                x = (x * 255).numpy().astype(np.uint8)
+                outputs.append(x)
+            video = self.numpy_to_pil(outputs)
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()
