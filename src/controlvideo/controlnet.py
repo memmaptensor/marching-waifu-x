@@ -619,11 +619,11 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
             "DownBlock3D",
         ]
 
-        from diffusers.utils import WEIGHTS_NAME
+        from diffusers.utils import SAFETENSORS_WEIGHTS_NAME
 
         model = cls.from_config(config)
         if control_path is None:
-            model_file = os.path.join(pretrained_model_path, WEIGHTS_NAME)
+            model_file = os.path.join(pretrained_model_path, SAFETENSORS_WEIGHTS_NAME)
             state_dict = torch.load(model_file, map_location="cpu")
         else:
             model_file = control_path
