@@ -13,7 +13,7 @@ from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D
-from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
+from src.controlvideo.ddpm_solver import DDPMScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
 from src.controlvideo.RIFE.IFNet_HDv3 import IFNet
 from src.controlvideo.unet import UNet3DConditionModel
@@ -39,7 +39,7 @@ class controlvideo_pipeline:
             sd_path, subfolder="text_encoder"
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
-        self.scheduler = DPMSolverMultistepScheduler.from_config(
+        self.scheduler = DDPMScheduler.from_config(
             sd_path, subfolder="scheduler", use_karras_sigmas=True
         )
         self.compel = Compel(
