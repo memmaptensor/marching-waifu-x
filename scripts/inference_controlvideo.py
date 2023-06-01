@@ -136,7 +136,7 @@ if __name__ == "__main__":
         args.textual_inversion_path,
         controlnet_conditions,
         args.video_length,
-        args.num_inference_Steps,
+        args.num_inference_steps,
         args.guidance_scale,
         args.smoother_steps.split(','),
         args.window_size,
