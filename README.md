@@ -22,3 +22,6 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 - [ ] InstantNGP
 - [ ] T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
+- [ ] Evaluation
+- [ ] Deployment on Replicate
+- [ ] Medium article
