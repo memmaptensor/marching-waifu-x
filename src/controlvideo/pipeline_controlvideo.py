@@ -1175,18 +1175,14 @@ class ControlVideoPipeline(
         elif output_type == "pil":
             video = torch.from_numpy(video)
             video = rearrange(video, "b c t h w -> t b c h w")
-
             outputs = []
             for x in video:
                 x = torchvision.utils.make_grid(x, nrow=4)
                 x = x.transpose(0, 1).transpose(1, 2).squeeze(-1)
-                x = (x * 255).numpy().astype(np.uint8)
+                x = ((1.0 - x) * 255).numpy().astype(np.uint8)
+                x = self.numpy_to_pil(x)[0]
                 outputs.append(x)
-
-            results = []
-            for frame in outputs:
-                results.append(self.numpy_to_pil(frame)[0])
-            video = results
+            video = outputs
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()

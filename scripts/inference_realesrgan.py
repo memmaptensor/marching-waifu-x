@@ -65,7 +65,7 @@ if __name__ == "__main__":
     for filepath in sorted(glob.glob(os.path.join(args.in_path, "*.png"))):
         pl = pathlib.Path(filepath)
         output_image = realesrgan(PIL.Image.open(filepath))
-        output_image.save(os.path.join(args.out_path, pl.stem, ".png"))
+        output_image.save(os.path.join(args.out_path, f"{pl.stem}.png"))
 
     del realesrgan
     gc.collect()
