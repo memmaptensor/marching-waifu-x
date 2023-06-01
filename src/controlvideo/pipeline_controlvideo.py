@@ -1185,7 +1185,7 @@ class ControlVideoPipeline(
 
             results = []
             for frame in outputs:
-                results.append(self.numpy_to_pil(frame))
+                results.append(self.numpy_to_pil(frame)[0])
             video = results
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
