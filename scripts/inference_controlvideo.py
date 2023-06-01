@@ -123,10 +123,10 @@ if __name__ == "__main__":
     output_paths = []
     controlnet_conditions = []
     for filepath in sorted(
-        glob.glob(os.path.combine(args.controlnet_conditioning_path, "*.png"))
+        glob.glob(os.path.join(args.controlnet_conditioning_path, "*.png"))
     ):
         pl = pathlib.Path(filepath)
-        output_paths.append(os.path.combine(args.out_path, pl.stem, ".png"))
+        output_paths.append(os.path.join(args.out_path, pl.stem, ".png"))
         controlnet_conditions.append(PIL.Image.open(filepath))
 
     # Inferrence
