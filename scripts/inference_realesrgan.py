@@ -17,33 +17,33 @@ from src.pipelines.realesrgan_pipeline import *
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "-in_path",
+        "--in_path",
         type=str,
         required=True,
         help="Directory containing frames to upscale",
     )
     parser.add_argument(
-        "-out_path",
+        "--out_path",
         type=str,
         required=True,
         help="Directory to contain the output frames",
     )
     parser.add_argument(
-        "-outscale", type=float, default=4.0, help="Factor to scale input by"
+        "--outscale", type=float, default=4.0, help="Factor to scale input by"
     )
-    parser.add_argument("-tile", type=int, default=192, help="Tile size")
+    parser.add_argument("--tile", type=int, default=192, help="Tile size")
     parser.add_argument(
-        "-tile_pad", type=int, default=16, help="Size to pad when upscaling"
-    )
-    parser.add_argument(
-        "-pre_pad", type=int, default=16, help="Size to pad the input before upscaling"
+        "--tile_pad", type=int, default=16, help="Size to pad when upscaling"
     )
     parser.add_argument(
-        "-face_enhance", type=bool, default=True, help="Enhance face using GFPGAN"
+        "--pre_pad", type=int, default=16, help="Size to pad the input before upscaling"
     )
-    parser.add_argument("-fp32", type=bool, default=False, help="Use fp32 precision")
     parser.add_argument(
-        "-gpu_id", type=int, default=0, help="GPU device ID to run inference on"
+        "--face_enhance", type=bool, default=True, help="Enhance face using GFPGAN"
+    )
+    parser.add_argument("--fp32", type=bool, default=False, help="Use fp32 precision")
+    parser.add_argument(
+        "--gpu_id", type=int, default=0, help="GPU device ID to run inference on"
     )
     args = parser.parse_args()
     return args
