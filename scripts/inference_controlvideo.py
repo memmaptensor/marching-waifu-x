@@ -68,7 +68,7 @@ def get_args():
         help="Directory containing controlnet conditioning images",
     )
     parser.add_argument(
-        "--video_length", type=int, default=15, help="Length of synthesized video"
+        "--video_length", type=int, default=16, help="Length of synthesized video"
     )
     parser.add_argument(
         "--num_inference_steps",
@@ -77,7 +77,7 @@ def get_args():
         help="Number of timesteps to take during DPM sampling",
     )
     parser.add_argument(
-        "--guidance_scale", type=int, default=10, help="Classifier-free guidance scale"
+        "--guidance_scale", type=float, default=10, help="Classifier-free guidance scale"
     )
     parser.add_argument(
         "--smoother_steps",
