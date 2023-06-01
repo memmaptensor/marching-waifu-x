@@ -33,7 +33,7 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 @dataclass
 class ControlVideoPipelineOutput(BaseOutput):
-    videos: Union[torch.Tensor, np.ndarray, List[PIL.Image.Image]]
+    video: Union[torch.Tensor, np.ndarray, List[PIL.Image.Image]]
 
 
 class MultiControlNetModel3D(ModelMixin):
@@ -785,7 +785,6 @@ class ControlVideoPipeline(
         latents: Optional[torch.FloatTensor] = None,
         prompt_embeds: Optional[torch.FloatTensor] = None,
         negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-        output_type: Optional[str] = "pil",
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: int = 1,
@@ -846,9 +845,6 @@ class ControlVideoPipeline(
                 Pre-generated negative text embeddings. Can be used to easily tweak text inputs, *e.g.* prompt
                 weighting. If not provided, negative_prompt_embeds will be generated from `negative_prompt` input
                 argument.
-            output_type (`str`, *optional*, defaults to `"pil"`):
-                The output format of the generate image. Choose between
-                [PIL](https://pillow.readthedocs.io/en/stable/): `PIL.Image.Image` or `np.array`.
             return_dict (`bool`, *optional*, defaults to `True`):
                 Whether or not to return a [`~pipelines.stable_diffusion.StableDiffusionPipelineOutput`] instead of a
                 plain tuple.
@@ -1167,22 +1163,11 @@ class ControlVideoPipeline(
             self.controlnet.to("cpu")
             torch.cuda.empty_cache()
         # Post-processing
-        video = self.decode_latents(latents)
+        video = self.decode_latents(latents)[0]
+        video = rearrange(video, "c f h w -> f h w c")
 
-        # Convert to tensor
-        if output_type == "tensor":
-            video = torch.from_numpy(video)
-        elif output_type == "pil":
-            video = torch.from_numpy(video)
-            video = rearrange(video, "b c t h w -> t b c h w")
-            outputs = []
-            for x in video:
-                x = torchvision.utils.make_grid(x, nrow=4)
-                x = x.transpose(0, 1).transpose(1, 2).squeeze(-1)
-                x = ((1.0 - x) * 255).numpy().astype(np.uint8)
-                x = self.numpy_to_pil(x)[0]
-                outputs.append(x)
-            video = outputs
+        # Convert to PIL
+        video = self.numpy_to_pil(video)
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()
@@ -1190,4 +1175,4 @@ class ControlVideoPipeline(
         if not return_dict:
             return video
 
-        return ControlVideoPipelineOutput(videos=video)
+        return ControlVideoPipelineOutput(video=video)

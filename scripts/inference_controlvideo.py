@@ -132,7 +132,7 @@ if __name__ == "__main__":
         output_paths.append(os.path.join(args.out_path, f"{pl.stem}.png"))
         controlnet_conditions.append(PIL.Image.open(filepath))
 
-    # Inferrence
+    # Inference
     output_video = pipe(
         args.prompt,
         args.negative_prompt,

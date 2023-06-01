@@ -124,7 +124,7 @@ class controlvideo_pipeline:
             controlnet_conditioning_scale=controlnet_conditioning_scale,
             generator=generator,
             output_type="pil",
-        ).videos
+        ).video
 
         del pipe
         gc.collect()
