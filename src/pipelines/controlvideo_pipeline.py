@@ -72,12 +72,12 @@ class controlvideo_pipeline:
         seed: Union[None, int] = None,
     ):
         # Load pipeline
-        if seed is None:
-            seed = int.from_bytes(os.urandom(2), "big")
-        print(f"Using seed: {seed}")
-
         generator = torch.Generator(device="cuda")
-        generator.manual_seed(seed)
+        if seed is None:
+            seed = generator.seed()
+        else:
+            generator = generator.manual_seed(seed)
+        print(f"Using seed: {seed}")
 
         pipe = ControlVideoPipeline(
             vae=self.vae,
