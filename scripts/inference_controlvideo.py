@@ -77,7 +77,10 @@ def get_args():
         help="Number of timesteps to take during DPM sampling",
     )
     parser.add_argument(
-        "--guidance_scale", type=float, default=10, help="Classifier-free guidance scale"
+        "--guidance_scale",
+        type=float,
+        default=10,
+        help="Classifier-free guidance scale",
     )
     parser.add_argument(
         "--smoother_steps",
@@ -138,7 +141,7 @@ if __name__ == "__main__":
         args.video_length,
         args.num_inference_steps,
         args.guidance_scale,
-        args.smoother_steps.split(','),
+        args.smoother_steps.split(","),
         args.window_size,
         args.controlnet_conditioning_scale,
         args.seed,

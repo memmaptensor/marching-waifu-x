@@ -9,11 +9,11 @@ import PIL.Image
 import torch
 from compel import Compel
 from diffusers import AutoencoderKL
+from diffusers.schedulers import DDIMScheduler
 from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D
-from src.controlvideo.ddpm_solver import DDPMScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
 from src.controlvideo.RIFE.IFNet_HDv3 import IFNet
 from src.controlvideo.unet import UNet3DConditionModel
@@ -39,7 +39,7 @@ class controlvideo_pipeline:
             sd_path, subfolder="text_encoder"
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
-        self.scheduler = DDPMScheduler.from_config(
+        self.scheduler = DDIMScheduler.from_config(
             sd_path, subfolder="scheduler", use_karras_sigmas=True
         )
         self.compel = Compel(
@@ -54,7 +54,7 @@ class controlvideo_pipeline:
         self.controlnet = ControlNetModel3D.from_pretrained_2d(controlnet_path).to(
             dtype=torch.float16
         )
-        self.interpolator = IFNet(ifnet_path).to(dtype=torch.float16)
+        self.interpolator = IFNet(ifnet_path).to(device="cuda:0", dtype=torch.float16)
 
     @torch.no_grad()
     def __call__(
@@ -63,7 +63,7 @@ class controlvideo_pipeline:
         negative_prompt: str,
         textual_inversion_path: str,
         frames: List[PIL.Image.Image],
-        video_length: int = 15,
+        video_length: int = 16,
         num_inference_steps: int = 50,
         guidance_scale: float = 10,
         smoother_steps: List[int] = [19, 20],
