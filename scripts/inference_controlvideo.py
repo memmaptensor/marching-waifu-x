@@ -140,7 +140,7 @@ if __name__ == "__main__":
         args.guidance_scale,
         args.smoother_steps.split(','),
         args.window_size,
-        args.controlnet_conditining_scale,
+        args.controlnet_conditioning_scale,
         args.seed,
     )
 
