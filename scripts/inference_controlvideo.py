@@ -14,91 +14,91 @@ from src.pipelines.controlvideo_pipeline import *
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--out_path", type=str, required=True, help="Directory of output"
+        "-out_path", type=str, required=True, help="Directory of output"
     )
     parser.add_argument(
-        "--sd_repo",
+        "-sd_repo",
         type=str,
         required=True,
         help="huggingface repository containing the main model weights",
     )
     parser.add_argument(
-        "--vae_repo",
+        "-vae_repo",
         type=str,
         required=True,
         help="huggingface repository containing the VAE weights",
     )
     parser.add_argument(
-        "--controlnet_repo",
+        "-controlnet_repo",
         type=str,
         required=True,
         help="huggingface repository containing the ControlNet weights",
     )
     parser.add_argument(
-        "--ifnet_path", type=str, required=True, help="Path to the IFNet weights"
+        "-ifnet_path", type=str, required=True, help="Path to the IFNet weights"
     )
     parser.add_argument(
-        "--cache_dir",
+        "-cache_dir",
         type=str,
         required=True,
         help="Directory to contain cached huggingface model weights",
     )
     parser.add_argument(
-        "--prompt",
+        "-prompt",
         type=str,
         required=True,
         help="Prompt to the target video in the Invoke.AI format",
     )
     parser.add_argument(
-        "--negative_prompt",
+        "-negative_prompt",
         type=str,
         required=True,
         help="Negative prompt to the target video in the Invoke.AI format",
     )
     parser.add_argument(
-        "--textual_inversion_path",
+        "-textual_inversion_path",
         type=str,
         required=True,
         help="Directory containing textual inversion embeddings",
     )
     parser.add_argument(
-        "--controlnet_conditioning_path",
+        "-controlnet_conditioning_path",
         type=str,
         required=True,
         help="Directory containing controlnet conditioning images",
     )
     parser.add_argument(
-        "--video_length", type=int, default=15, help="Length of synthesized video"
+        "-video_length", type=int, default=15, help="Length of synthesized video"
     )
     parser.add_argument(
-        "--num_inference_steps",
+        "-num_inference_steps",
         type=int,
         default=50,
         help="Number of timesteps to take during DPM sampling",
     )
     parser.add_argument(
-        "--guidance_scale", type=int, default=10, help="Classifier-free guidance scale"
+        "-guidance_scale", type=int, default=10, help="Classifier-free guidance scale"
     )
     parser.add_argument(
-        "--smoother_steps",
+        "-smoother_steps",
         type=str,
         default="19,20",
         help="Timesteps at which using interleaved-frame smoother",
     )
     parser.add_argument(
-        "--window_size",
+        "-window_size",
         type=int,
         default=None,
         help="Gamma, controlling the window size in hierachical sampling, defaults to sqrt(video_length)",
     )
     parser.add_argument(
-        "--controlnet_conditioning_scale",
+        "-controlnet_conditioning_scale",
         type=float,
         default=1.0,
         help="Coefficient controlling how much the ControlNet weights affect the main SD UNet",
     )
     parser.add_argument(
-        "--seed",
+        "-seed",
         type=int,
         default=None,
         help="Random seed of generator, defaults to a random seed",
