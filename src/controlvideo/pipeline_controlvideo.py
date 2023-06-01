@@ -1,18 +1,3 @@
-# Copyright 2023 The HuggingFace Team. All rights reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-
 import inspect
 import os
 from dataclasses import dataclass
@@ -21,10 +6,16 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import PIL.Image
 import torch
-from diffusers import ModelMixin
+from diffusers import (
+    ModelMixin,
+    AutoencoderKL,
+    DiffusionPipeline,
+    logging,
+)
+from diffusers.loaders import LoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL
 from diffusers.pipeline_utils import DiffusionPipeline
-from diffusers.schedulers import DDIMScheduler
+from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.utils import (
     PIL_INTERPOLATION,
     BaseOutput,
@@ -46,7 +37,7 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 @dataclass
 class ControlVideoPipelineOutput(BaseOutput):
-    videos: Union[torch.Tensor, np.ndarray]
+    videos: Union[torch.Tensor, np.ndarray, List[PIL.Image.Image]]
 
 
 class MultiControlNetModel3D(ModelMixin):
@@ -112,7 +103,9 @@ class MultiControlNetModel3D(ModelMixin):
         return down_block_res_samples, mid_block_res_sample
 
 
-class ControlVideoPipeline(DiffusionPipeline):
+class ControlVideoPipeline(
+    DiffusionPipeline, TextualInversionLoaderMixin, LoraLoaderMixin
+):
     r"""
     Pipeline for text-to-video generation using Stable Diffusion with ControlNet guidance.
 
@@ -136,12 +129,7 @@ class ControlVideoPipeline(DiffusionPipeline):
             conditioning.
         scheduler ([`SchedulerMixin`]):
             A scheduler to be used in combination with `unet` to denoise the encoded image latents. Can be one of
-            [`DDIMScheduler`], [`LMSDiscreteScheduler`], or [`PNDMScheduler`].
-        safety_checker ([`StableDiffusionSafetyChecker`]):
-            Classification module that estimates whether generated images could be considered offensive or harmful.
-            Please, refer to the [model card](https://huggingface.co/runwayml/stable-diffusion-v1-5) for details.
-        feature_extractor ([`CLIPImageProcessor`]):
-            Model that extracts features from generated images to be used as inputs for the `safety_checker`.
+            [`KarrasDiffusionSchedulers`].
     """
     _optional_components = ["safety_checker", "feature_extractor"]
 
@@ -157,7 +145,7 @@ class ControlVideoPipeline(DiffusionPipeline):
             Tuple[ControlNetModel3D],
             MultiControlNetModel3D,
         ],
-        scheduler: DDIMScheduler,
+        scheduler: KarrasDiffusionSchedulers,
         interpolater: IFNet,
     ):
         super().__init__()
@@ -197,7 +185,7 @@ class ControlVideoPipeline(DiffusionPipeline):
     def enable_sequential_cpu_offload(self, gpu_id=0):
         r"""
         Offloads all models to CPU using accelerate, significantly reducing memory usage. When called, unet,
-        text_encoder, vae, controlnet, and safety checker have their state dicts saved to CPU and then are moved to a
+        text_encoder, vae, and controlnet have their state dicts saved to CPU and then are moved to a
         `torch.device('meta') and loaded to GPU only when their specific submodule has its `forward` method called.
         Note that offloading happens on a submodule basis. Memory savings are higher than with
         `enable_model_cpu_offload`, but performance is lower.
@@ -216,11 +204,6 @@ class ControlVideoPipeline(DiffusionPipeline):
             self.controlnet,
         ]:
             cpu_offload(cpu_offloaded_model, device)
-
-        if self.safety_checker is not None:
-            cpu_offload(
-                self.safety_checker, execution_device=device, offload_buffers=True
-            )
 
     def enable_model_cpu_offload(self, gpu_id=0):
         r"""
@@ -242,12 +225,6 @@ class ControlVideoPipeline(DiffusionPipeline):
         for cpu_offloaded_model in [self.text_encoder, self.unet, self.vae]:
             _, hook = cpu_offload_with_hook(
                 cpu_offloaded_model, device, prev_module_hook=hook
-            )
-
-        if self.safety_checker is not None:
-            # the safety checker can offload the vae again
-            _, hook = cpu_offload_with_hook(
-                self.safety_checker, device, prev_module_hook=hook
             )
 
         # control net hook has be manually offloaded as it alternates with unet
@@ -318,6 +295,10 @@ class ControlVideoPipeline(DiffusionPipeline):
             batch_size = prompt_embeds.shape[0]
 
         if prompt_embeds is None:
+            # textual inversion: procecss multi-vector tokens if necessary
+            if isinstance(self, TextualInversionLoaderMixin):
+                prompt = self.maybe_convert_prompt(prompt, self.tokenizer)
+
             text_inputs = self.tokenizer(
                 prompt,
                 padding="max_length",
@@ -384,6 +365,10 @@ class ControlVideoPipeline(DiffusionPipeline):
                 )
             else:
                 uncond_tokens = negative_prompt
+
+            # textual inversion: procecss multi-vector tokens if necessary
+            if isinstance(self, TextualInversionLoaderMixin):
+                uncond_tokens = self.maybe_convert_prompt(uncond_tokens, self.tokenizer)
 
             max_length = prompt_embeds.shape[1]
             uncond_input = self.tokenizer(
@@ -762,7 +747,7 @@ class ControlVideoPipeline(DiffusionPipeline):
         alpha_prod_t_prev = (
             self.scheduler.alphas_cumprod[prev_timestep]
             if prev_timestep >= 0
-            else self.scheduler.final_alpha_cumprod
+            else self.scheduler.alphas_cumprod[0]
         )
         return alpha_prod_t_prev
 
@@ -782,369 +767,6 @@ class ControlVideoPipeline(DiffusionPipeline):
             inter_frame_list.append(s[1:].tolist())
         return key_frame_indices, inter_frame_list
 
-    @torch.no_grad()
-    def __call__(
-        self,
-        prompt: Union[str, List[str]] = None,
-        video_length: Optional[int] = 1,
-        frames: Union[
-            List[torch.FloatTensor],
-            List[PIL.Image.Image],
-            List[List[torch.FloatTensor]],
-            List[List[PIL.Image.Image]],
-        ] = None,
-        height: Optional[int] = None,
-        width: Optional[int] = None,
-        num_inference_steps: int = 50,
-        guidance_scale: float = 7.5,
-        negative_prompt: Optional[Union[str, List[str]]] = None,
-        num_videos_per_prompt: Optional[int] = 1,
-        eta: float = 0.0,
-        generator: Optional[Union[torch.Generator, List[torch.Generator]]] = None,
-        latents: Optional[torch.FloatTensor] = None,
-        prompt_embeds: Optional[torch.FloatTensor] = None,
-        negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-        output_type: Optional[str] = "tensor",
-        return_dict: bool = True,
-        callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
-        callback_steps: int = 1,
-        cross_attention_kwargs: Optional[Dict[str, Any]] = None,
-        controlnet_conditioning_scale: Union[float, List[float]] = 1.0,
-        smooth_steps: List = [19, 20],
-        **kwargs,
-    ):
-        r"""
-        Function invoked when calling the pipeline for generation.
-
-        Args:
-            prompt (`str` or `List[str]`, *optional*):
-                The prompt or prompts to guide the image generation. If not defined, one has to pass `prompt_embeds`.
-                instead.
-            frames (`List[torch.FloatTensor]`, `List[PIL.Image.Image]`,
-                    `List[List[torch.FloatTensor]]`, or `List[List[PIL.Image.Image]]`):
-                The ControlVideo input condition. ControlVideo uses this input condition to generate guidance to Unet. If
-                the type is specified as `Torch.FloatTensor`, it is passed to ControlNet as is. `PIL.Image.Image` can
-                also be accepted as an image. The dimensions of the output image defaults to `image`'s dimensions. If
-                height and/or width are passed, `image` is resized according to them. If multiple ControlNets are
-                specified in init, images must be passed as a list such that each element of the list can be correctly
-                batched for input to a single controlnet.
-            height (`int`, *optional*, defaults to self.unet.config.sample_size * self.vae_scale_factor):
-                The height in pixels of the generated image.
-            width (`int`, *optional*, defaults to self.unet.config.sample_size * self.vae_scale_factor):
-                The width in pixels of the generated image.
-            num_inference_steps (`int`, *optional*, defaults to 50):
-                The number of denoising steps. More denoising steps usually lead to a higher quality image at the
-                expense of slower inference.
-            guidance_scale (`float`, *optional*, defaults to 7.5):
-                Guidance scale as defined in [Classifier-Free Diffusion Guidance](https://arxiv.org/abs/2207.12598).
-                `guidance_scale` is defined as `w` of equation 2. of [Imagen
-                Paper](https://arxiv.org/pdf/2205.11487.pdf). Guidance scale is enabled by setting `guidance_scale >
-                1`. Higher guidance scale encourages to generate images that are closely linked to the text `prompt`,
-                usually at the expense of lower image quality.
-            negative_prompt (`str` or `List[str]`, *optional*):
-                The prompt or prompts not to guide the image generation. If not defined, one has to pass
-                `negative_prompt_embeds`. instead. If not defined, one has to pass `negative_prompt_embeds`. instead.
-                Ignored when not using guidance (i.e., ignored if `guidance_scale` is less than `1`).
-            num_videos_per_prompt (`int`, *optional*, defaults to 1):
-                The number of images to generate per prompt.
-            eta (`float`, *optional*, defaults to 0.0):
-                Corresponds to parameter eta (η) in the DDIM paper: https://arxiv.org/abs/2010.02502. Only applies to
-                [`schedulers.DDIMScheduler`], will be ignored for others.
-            generator (`torch.Generator` or `List[torch.Generator]`, *optional*):
-                One or a list of [torch generator(s)](https://pytorch.org/docs/stable/generated/torch.Generator.html)
-                to make generation deterministic.
-            latents (`torch.FloatTensor`, *optional*):
-                Pre-generated noisy latents, sampled from a Gaussian distribution, to be used as inputs for image
-                generation. Can be used to tweak the same generation with different prompts. If not provided, a latents
-                tensor will ge generated by sampling using the supplied random `generator`.
-            prompt_embeds (`torch.FloatTensor`, *optional*):
-                Pre-generated text embeddings. Can be used to easily tweak text inputs, *e.g.* prompt weighting. If not
-                provided, text embeddings will be generated from `prompt` input argument.
-            negative_prompt_embeds (`torch.FloatTensor`, *optional*):
-                Pre-generated negative text embeddings. Can be used to easily tweak text inputs, *e.g.* prompt
-                weighting. If not provided, negative_prompt_embeds will be generated from `negative_prompt` input
-                argument.
-            output_type (`str`, *optional*, defaults to `"pil"`):
-                The output format of the generate image. Choose between
-                [PIL](https://pillow.readthedocs.io/en/stable/): `PIL.Image.Image` or `np.array`.
-            return_dict (`bool`, *optional*, defaults to `True`):
-                Whether or not to return a [`~pipelines.stable_diffusion.StableDiffusionPipelineOutput`] instead of a
-                plain tuple.
-            callback (`Callable`, *optional*):
-                A function that will be called every `callback_steps` steps during inference. The function will be
-                called with the following arguments: `callback(step: int, timestep: int, latents: torch.FloatTensor)`.
-            callback_steps (`int`, *optional*, defaults to 1):
-                The frequency at which the `callback` function will be called. If not specified, the callback will be
-                called at every step.
-            cross_attention_kwargs (`dict`, *optional*):
-                A kwargs dictionary that if specified is passed along to the `AttentionProcessor` as defined under
-                `self.processor` in
-                [diffusers.cross_attention](https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/cross_attention.py).
-            controlnet_conditioning_scale (`float` or `List[float]`, *optional*, defaults to 1.0):
-                The outputs of the controlnet are multiplied by `controlnet_conditioning_scale` before they are added
-                to the residual in the original unet. If multiple ControlNets are specified in init, you can set the
-                corresponding scale as a list.
-            smooth_steps (`List[int]`):
-                Perform smoother on predicted RGB frames at these timesteps.
-
-        Examples:
-
-        Returns:
-            [`ControlVideoPipelineOutput`] or `tuple`:
-            [`ControlVideoPipelineOutput`] if `return_dict` is True, otherwise a `tuple.
-            When returning a tuple, the first element is a list with the generated images, and the second element is a
-            list of `bool`s denoting whether the corresponding generated image likely represents "not-safe-for-work"
-            (nsfw) content, according to the `safety_checker`.
-        """
-        # 0. Default height and width to unet
-        height, width = self._default_height_width(height, width, frames)
-
-        # 1. Check inputs. Raise error if not correct
-        self.check_inputs(
-            prompt,
-            height,
-            width,
-            callback_steps,
-            negative_prompt,
-            prompt_embeds,
-            negative_prompt_embeds,
-            controlnet_conditioning_scale,
-        )
-
-        # 2. Define call parameters
-        if prompt is not None and isinstance(prompt, str):
-            batch_size = 1
-        elif prompt is not None and isinstance(prompt, list):
-            batch_size = len(prompt)
-        else:
-            batch_size = prompt_embeds.shape[0]
-
-        device = self._execution_device
-        # here `guidance_scale` is defined analog to the guidance weight `w` of equation (2)
-        # of the Imagen paper: https://arxiv.org/pdf/2205.11487.pdf . `guidance_scale = 1`
-        # corresponds to doing no classifier free guidance.
-        do_classifier_free_guidance = guidance_scale > 1.0
-
-        if isinstance(self.controlnet, MultiControlNetModel3D) and isinstance(
-            controlnet_conditioning_scale, float
-        ):
-            controlnet_conditioning_scale = [controlnet_conditioning_scale] * len(
-                self.controlnet.nets
-            )
-
-        # 3. Encode input prompt
-        prompt_embeds = self._encode_prompt(
-            prompt,
-            device,
-            num_videos_per_prompt,
-            do_classifier_free_guidance,
-            negative_prompt,
-            prompt_embeds=prompt_embeds,
-            negative_prompt_embeds=negative_prompt_embeds,
-        )
-
-        # 4. Prepare image
-        if isinstance(self.controlnet, ControlNetModel3D):
-            images = []
-            for i_img in frames:
-                i_img = self.prepare_image(
-                    image=i_img,
-                    width=width,
-                    height=height,
-                    batch_size=batch_size * num_videos_per_prompt,
-                    num_videos_per_prompt=num_videos_per_prompt,
-                    device=device,
-                    dtype=self.controlnet.dtype,
-                    do_classifier_free_guidance=do_classifier_free_guidance,
-                )
-                images.append(i_img)
-            frames = torch.stack(images, dim=2)  # b x c x f x h x w
-        elif isinstance(self.controlnet, MultiControlNetModel3D):
-            images = []
-            for i_img in frames:
-                i_images = []
-                for ii_img in i_img:
-                    ii_img = self.prepare_image(
-                        image=ii_img,
-                        width=width,
-                        height=height,
-                        batch_size=batch_size * num_videos_per_prompt,
-                        num_videos_per_prompt=num_videos_per_prompt,
-                        device=device,
-                        dtype=self.controlnet.dtype,
-                        do_classifier_free_guidance=do_classifier_free_guidance,
-                    )
-
-                    i_images.append(ii_img)
-                images.append(torch.stack(i_images, dim=2))
-            frames = images
-        else:
-            assert False
-
-        # 5. Prepare timesteps
-        self.scheduler.set_timesteps(num_inference_steps, device=device)
-        timesteps = self.scheduler.timesteps
-
-        # 6. Prepare latent variables
-        num_channels_latents = self.unet.in_channels
-        latents = self.prepare_latents(
-            batch_size * num_videos_per_prompt,
-            num_channels_latents,
-            video_length,
-            height,
-            width,
-            prompt_embeds.dtype,
-            device,
-            generator,
-            latents,
-            same_frame_noise=True,
-        )
-
-        # 7. Prepare extra step kwargs. TODO: Logic should ideally just be moved out of the pipeline
-        extra_step_kwargs = self.prepare_extra_step_kwargs(generator, eta)
-
-        # Prepare video indices if performing smoothing
-        if len(smooth_steps) > 0:
-            video_indices = np.arange(video_length)
-            zero_indices = video_indices[0::2]
-            one_indices = video_indices[1::2]
-
-        # 8. Denoising loop
-        num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
-        with self.progress_bar(total=num_inference_steps) as progress_bar:
-            for i, t in enumerate(timesteps):
-                torch.cuda.empty_cache()
-
-                # expand the latents if we are doing classifier free guidance
-                latent_model_input = (
-                    torch.cat([latents] * 2) if do_classifier_free_guidance else latents
-                )
-                latent_model_input = self.scheduler.scale_model_input(
-                    latent_model_input, t
-                )
-
-                # controlnet(s) inference
-                down_block_res_samples, mid_block_res_sample = self.controlnet(
-                    latent_model_input,
-                    t,
-                    encoder_hidden_states=prompt_embeds,
-                    controlnet_cond=frames,
-                    conditioning_scale=controlnet_conditioning_scale,
-                    return_dict=False,
-                )
-                # predict the noise residual
-                noise_pred = self.unet(
-                    latent_model_input,
-                    t,
-                    encoder_hidden_states=prompt_embeds,
-                    cross_attention_kwargs=cross_attention_kwargs,
-                    down_block_additional_residuals=down_block_res_samples,
-                    mid_block_additional_residual=mid_block_res_sample,
-                ).sample
-
-                # perform guidance
-                if do_classifier_free_guidance:
-                    noise_pred_uncond, noise_pred_text = noise_pred.chunk(2)
-                    noise_pred = noise_pred_uncond + guidance_scale * (
-                        noise_pred_text - noise_pred_uncond
-                    )
-
-                # compute the previous noisy sample x_t -> x_t-1
-                step_dict = self.scheduler.step(
-                    noise_pred, t, latents, **extra_step_kwargs
-                )
-                latents = step_dict.prev_sample
-                pred_original_sample = step_dict.pred_original_sample
-
-                # Smooth videos
-                if (num_inference_steps - i) in smooth_steps:
-                    pred_video = self.decode_latents(
-                        pred_original_sample, return_tensor=True
-                    )  # b c f h w
-                    pred_video = rearrange(pred_video, "b c f h w -> b f c h w")
-                    for b_i in range(len(pred_video)):
-                        if i % 2 == 0:
-                            for v_i in range(len(zero_indices) - 1):
-                                s_frame = pred_video[b_i][zero_indices[v_i]].unsqueeze(
-                                    0
-                                )
-                                e_frame = pred_video[b_i][
-                                    zero_indices[v_i + 1]
-                                ].unsqueeze(0)
-                                pred_video[b_i][
-                                    one_indices[v_i]
-                                ] = self.interpolater.inference(s_frame, e_frame)[0]
-                        else:
-                            if video_length % 2 == 1:
-                                tmp_one_indices = (
-                                    [0] + one_indices.tolist() + [video_length - 1]
-                                )
-                            else:
-                                tmp_one_indices = [0] + one_indices.tolist()
-
-                            for v_i in range(len(tmp_one_indices) - 1):
-                                s_frame = pred_video[b_i][
-                                    tmp_one_indices[v_i]
-                                ].unsqueeze(0)
-                                e_frame = pred_video[b_i][
-                                    tmp_one_indices[v_i + 1]
-                                ].unsqueeze(0)
-                                pred_video[b_i][
-                                    zero_indices[v_i]
-                                ] = self.interpolater.inference(s_frame, e_frame)[0]
-                    pred_video = rearrange(pred_video, "b f c h w -> (b f) c h w")
-                    pred_video = 2.0 * pred_video - 1.0
-                    # ori_pred_original_sample = pred_original_sample
-                    pred_original_sample = self.vae.encode(
-                        pred_video
-                    ).latent_dist.sample(generator)
-                    pred_original_sample *= self.vae.config.scaling_factor
-                    pred_original_sample = rearrange(
-                        pred_original_sample, "(b f) c h w -> b c f h w", f=video_length
-                    )
-
-                    # predict xt-1 with smoothed x0
-                    alpha_prod_t_prev = self.get_alpha_prev(t)
-                    # preserve more details
-                    # pred_original_sample = ori_pred_original_sample * alpha_prod_t_prev + (1 - alpha_prod_t_prev) * pred_original_sample
-                    # compute "direction pointing to x_t" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
-                    pred_sample_direction = (1 - alpha_prod_t_prev) ** (
-                        0.5
-                    ) * noise_pred
-                    # compute x_t without "random noise" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
-                    latents = (
-                        alpha_prod_t_prev ** (0.5) * pred_original_sample
-                        + pred_sample_direction
-                    )
-
-                # call the callback, if provided
-                if i == len(timesteps) - 1 or (
-                    (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
-                ):
-                    progress_bar.update()
-                    if callback is not None and i % callback_steps == 0:
-                        callback(i, t, latents)
-
-        # If we do sequential model offloading, let's offload unet and controlnet
-        # manually for max memory savings
-        if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
-            self.unet.to("cpu")
-            self.controlnet.to("cpu")
-            torch.cuda.empty_cache()
-        # Post-processing
-        video = self.decode_latents(latents)
-
-        # Convert to tensor
-        if output_type == "tensor":
-            video = torch.from_numpy(video)
-
-        if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
-            self.final_offload_hook.offload()
-
-        if not return_dict:
-            return video
-
-        return ControlVideoPipelineOutput(videos=video)
 
     @torch.no_grad()
     def generate_long_video(
@@ -1168,7 +790,7 @@ class ControlVideoPipeline(DiffusionPipeline):
         latents: Optional[torch.FloatTensor] = None,
         prompt_embeds: Optional[torch.FloatTensor] = None,
         negative_prompt_embeds: Optional[torch.FloatTensor] = None,
-        output_type: Optional[str] = "tensor",
+        output_type: Optional[str] = "pil",
         return_dict: bool = True,
         callback: Optional[Callable[[int, int, torch.FloatTensor], None]] = None,
         callback_steps: int = 1,
@@ -1253,14 +875,6 @@ class ControlVideoPipeline(DiffusionPipeline):
                 Perform smoother on predicted RGB frames at these timesteps.
             window_size ('int'):
                 The length of each short clip.
-        Examples:
-
-        Returns:
-            [`~pipelines.stable_diffusion.StableDiffusionPipelineOutput`] or `tuple`:
-            [`~pipelines.stable_diffusion.StableDiffusionPipelineOutput`] if `return_dict` is True, otherwise a `tuple.
-            When returning a tuple, the first element is a list with the generated images, and the second element is a
-            list of `bool`s denoting whether the corresponding generated image likely represents "not-safe-for-work"
-            (nsfw) content, according to the `safety_checker`.
         """
         # 0. Default height and width to unet
         height, width = self._default_height_width(height, width, frames)
@@ -1563,6 +1177,8 @@ class ControlVideoPipeline(DiffusionPipeline):
         # Convert to tensor
         if output_type == "tensor":
             video = torch.from_numpy(video)
+        elif output_type == "pil":
+            video = self.numpy_to_pil(video)
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()

@@ -1,6 +1,5 @@
 import os
 
-import PIL.Image
 import torch
 from basicsr.archs.rrdbnet_arch import RRDBNet
 from basicsr.utils.download_util import load_file_from_url
@@ -73,7 +72,7 @@ class realesrgan_pipeline:
 
     @torch.no_grad()
     def __call__(self, img):
-        img = image_wrapper(PIL.Image.open(img), "pil").to_cv2()
+        img = image_wrapper(img, "pil").to_cv2()
 
         if self.face_enhancer is not None:
             _, _, output = self.face_enhancer.enhance(

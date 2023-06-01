@@ -1,5 +1,3 @@
-# Adapted from https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/attention.py
-
 import math
 from dataclasses import dataclass
 from typing import Callable, Optional

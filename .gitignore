@@ -1,3 +1,2 @@
-data/models/Nabylon-v1.0-fp16
-data/models/Nabylon-v1.0-fp16-inpainting
-data/models/models.tar.gz
+data/checkpoints
+!data/checkpoints/flownet.pkl

@@ -1,5 +1,3 @@
-# Adapted from https://github.com/huggingface/diffusers/blob/main/src/diffusers/models/unet_2d_condition.py
-
 import json
 import os
 from dataclasses import dataclass
