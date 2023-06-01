@@ -620,14 +620,15 @@ class ControlNetModel3D(ModelMixin, ConfigMixin):
         ]
 
         from diffusers.utils import SAFETENSORS_WEIGHTS_NAME
+        from safetensors.torch import load_file
 
         model = cls.from_config(config)
         if control_path is None:
             model_file = os.path.join(pretrained_model_path, SAFETENSORS_WEIGHTS_NAME)
-            state_dict = torch.load(model_file, map_location="cpu")
+            state_dict = load_file(model_file, "cpu")
         else:
             model_file = control_path
-            state_dict = torch.load(model_file, map_location="cpu")
+            state_dict = load_file(model_file, "cpu")
             state_dict = {k[14:]: state_dict[k] for k in state_dict.keys()}
 
         for k, v in model.state_dict().items():

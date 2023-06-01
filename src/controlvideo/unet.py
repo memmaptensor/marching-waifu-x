@@ -492,7 +492,10 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         model_file = os.path.join(pretrained_model_path, SAFETENSORS_WEIGHTS_NAME)
         if not os.path.isfile(model_file):
             raise RuntimeError(f"{model_file} does not exist")
-        state_dict = torch.load(model_file, map_location="cpu")
+
+        from safetensors.torch import load_file
+
+        state_dict = load_file(model_file, "cpu")
         # for k, v in model.state_dict().items():
         #     if '_temp.' in k:
         #         state_dict.update({k: v})
