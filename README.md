@@ -21,6 +21,7 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 - [x] 1st-order MultistepDPM++ Karras
 - [ ] Higher-order MultistepDPM++ Karras
 - [ ] MultiControlNet + Multiprompt
+- [ ] Reconsider DeepDanbooru
 - [ ] Fix blender base model
 - [ ] Grounding DINO + SAM
 - [ ] InstantNGP
