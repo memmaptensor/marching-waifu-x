@@ -33,7 +33,7 @@ logger = logging.get_logger(__name__)  # pylint: disable=invalid-name
 
 @dataclass
 class ControlVideoPipelineOutput(BaseOutput):
-    video: Union[torch.Tensor, np.ndarray, List[PIL.Image.Image]]
+    videos: Union[torch.Tensor, np.ndarray, List[PIL.Image.Image]]
 
 
 class MultiControlNetModel3D(ModelMixin):
@@ -1163,16 +1163,18 @@ class ControlVideoPipeline(
             self.controlnet.to("cpu")
             torch.cuda.empty_cache()
         # Post-processing
-        video = self.decode_latents(latents)[0]
-        video = rearrange(video, "c f h w -> f h w c")
+        videos = self.decode_latents(latents)
+        videos = rearrange(videos, "b c f h w -> b f h w c")
 
         # Convert to PIL
-        video = self.numpy_to_pil(video)
+        outputs = []
+        for videos in videos:
+            outputs.append(self.numpy_to_pil(videos))
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()
 
         if not return_dict:
-            return video
+            return videos
 
-        return ControlVideoPipelineOutput(video=video)
+        return ControlVideoPipelineOutput(videos=videos)

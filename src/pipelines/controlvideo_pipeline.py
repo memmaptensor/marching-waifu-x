@@ -9,7 +9,7 @@ import PIL.Image
 import torch
 from compel import Compel
 from diffusers import AutoencoderKL
-from diffusers.schedulers import DDIMScheduler
+from diffusers.schedulers import DPMSolverMultistepScheduler
 from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
@@ -39,7 +39,7 @@ class controlvideo_pipeline:
             sd_path, subfolder="text_encoder"
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
-        self.scheduler = DDIMScheduler.from_config(
+        self.scheduler = DPMSolverMultistepScheduler.from_config(
             sd_path, subfolder="scheduler", use_karras_sigmas=True
         )
         self.compel = Compel(
@@ -124,7 +124,7 @@ class controlvideo_pipeline:
             controlnet_conditioning_scale=controlnet_conditioning_scale,
             generator=generator,
             output_type="pil",
-        ).video
+        ).videos[0]
 
         del pipe
         gc.collect()

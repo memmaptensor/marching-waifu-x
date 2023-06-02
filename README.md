@@ -17,7 +17,9 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 
 ## To-do:
 - [x] ControlVideo + RealESRGAN pipeline
-- [ ] MultiControlNet + Batch inference + MultistepDPM Karras + Multiprompt
+- [x] Batch inference
+- [x] 2nd-order MultistepDPM++ Karras
+- [ ] MultiControlNet + Multiprompt
 - [ ] Fix blender base model
 - [ ] Grounding DINO + SAM
 - [ ] InstantNGP
