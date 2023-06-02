@@ -1168,8 +1168,9 @@ class ControlVideoPipeline(
 
         # Convert to PIL
         outputs = []
-        for videos in videos:
-            outputs.append(self.numpy_to_pil(videos))
+        for video in videos:
+            outputs.append(self.numpy_to_pil(video))
+        videos = outputs
 
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.final_offload_hook.offload()
