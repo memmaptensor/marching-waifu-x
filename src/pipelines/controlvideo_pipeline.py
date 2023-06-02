@@ -9,11 +9,11 @@ import PIL.Image
 import torch
 from compel import Compel
 from diffusers import AutoencoderKL
-from diffusers.schedulers import DPMSolverMultistepScheduler
 from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D
+from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
 from src.controlvideo.RIFE.IFNet_HDv3 import IFNet
 from src.controlvideo.unet import UNet3DConditionModel
