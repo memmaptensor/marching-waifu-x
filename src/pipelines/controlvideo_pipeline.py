@@ -40,7 +40,7 @@ class controlvideo_pipeline:
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
         self.scheduler = DPMSolverMultistepScheduler.from_config(
-            sd_path, subfolder="scheduler", use_karras_sigmas=True, solver_order=1
+            sd_path, subfolder="scheduler", use_karras_sigmas=True
         )
         self.compel = Compel(
             self.tokenizer,

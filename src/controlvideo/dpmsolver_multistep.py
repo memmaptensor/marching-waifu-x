@@ -606,7 +606,6 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         )
 
         model_output = self.convert_model_output(model_output, timestep, sample)
-        pred_original_sample = model_output
         for i in range(self.config.solver_order - 1):
             self.model_outputs[i] = self.model_outputs[i + 1]
         self.model_outputs[-1] = model_output
@@ -645,7 +644,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             return (prev_sample,)
 
         return DPMSolverMultistepSchedulerOutput(
-            prev_sample=prev_sample, pred_original_sample=pred_original_sample
+            prev_sample=prev_sample, pred_original_sample=model_output
         )
 
     def scale_model_input(
