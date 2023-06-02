@@ -16,8 +16,9 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
     - [rossiyareich/Nabylon-v1.0-fp16](https://huggingface.co/rossiyareich/Nabylon-v1.0-fp16)
 
 ## To-do:
+- [x] ControlVideo + RealESRGAN pipeline
+- [ ] MultiControlNet + Batch inference + MultistepDPM Karras + Multiprompt
 - [ ] Fix blender base model
-- [ ] ControlVideo + RealESRGAN pipeline
 - [ ] Grounding DINO + SAM
 - [ ] InstantNGP
 - [ ] T2M-GPT + SMPL-to-FBX
