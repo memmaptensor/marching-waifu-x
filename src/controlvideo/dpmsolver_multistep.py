@@ -374,19 +374,11 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         if self.config.algorithm_type == "dpmsolver++":
             if self.config.prediction_type == "epsilon":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
-                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
-                    sigma_t, sample.dim()
-                )
-                alpha_t = alpha_t.to(device=sample.device, dtype=sample.dtype)
-                sigma_t = sigma_t.to(device=sample.device, dtype=sample.dtype)
                 x0_pred = (sample - sigma_t * model_output) / alpha_t
             elif self.config.prediction_type == "sample":
                 x0_pred = model_output
             elif self.config.prediction_type == "v_prediction":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
-                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
-                    sigma_t, sample.dim()
-                )
                 x0_pred = alpha_t * sample - sigma_t * model_output
             else:
                 raise ValueError(
@@ -404,16 +396,10 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
                 return model_output
             elif self.config.prediction_type == "sample":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
-                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
-                    sigma_t, sample.dim()
-                )
                 epsilon = (sample - alpha_t * model_output) / sigma_t
                 return epsilon
             elif self.config.prediction_type == "v_prediction":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
-                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
-                    sigma_t, sample.dim()
-                )
                 epsilon = alpha_t * model_output + sigma_t * sample
                 return epsilon
             else:
@@ -633,7 +619,9 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
 
         model_output = self.convert_model_output(model_output, timestep, sample)
         for i in range(self.config.solver_order - 1):
-            self.model_outputs[i] = self.model_outputs[i + 1]
+            self.model_outputs[i] = expand_dims(
+                self.model_outputs[i + 1], model_output.dim()
+            )
         self.model_outputs[-1] = model_output
 
         if (
