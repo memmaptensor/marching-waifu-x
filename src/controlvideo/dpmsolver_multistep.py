@@ -377,8 +377,8 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
                 alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
                     sigma_t, sample.dim()
                 )
-                alpha_t = alpha_t.to(sample.device)
-                sigma_t = sigma_t.to(sample.device)
+                alpha_t = alpha_t.to(device=sample.device, dtype=sample.dtype)
+                sigma_t = sigma_t.to(device=sample.device, dtype=sample.dtype)
                 x0_pred = (sample - sigma_t * model_output) / alpha_t
             elif self.config.prediction_type == "sample":
                 x0_pred = model_output
