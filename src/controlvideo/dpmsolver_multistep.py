@@ -206,7 +206,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         )[::-1].copy()
         self.timesteps = torch.from_numpy(timesteps)
         self.model_outputs = [[None] * solver_order, [None] * solver_order]
-        self.lower_order_nums = 0
+        self.lower_order_nums = [0] * solver_order
         self.use_karras_sigmas = use_karras_sigmas
 
     def set_timesteps(
@@ -258,7 +258,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             ]
             * self.config.solver_order,
         ]
-        self.lower_order_nums = 0
+        self.lower_order_nums = [0] * self.config.solver_order
 
     # Copied from diffusers.schedulers.scheduling_ddpm.DDPMScheduler._threshold_sample
     def _threshold_sample(self, sample: torch.FloatTensor) -> torch.FloatTensor:
@@ -623,19 +623,19 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
 
         if (
             self.config.solver_order == 1
-            or self.lower_order_nums < 1
+            or self.lower_order_nums[output_index] < 1
             or lower_order_final
         ):
-            print('fo: ', model_output.dim())
+            print("fo: ", model_output.shape)
             prev_sample = self.dpm_solver_first_order_update(
                 model_output, timestep, prev_timestep, sample
             )
         elif (
             self.config.solver_order == 2
-            or self.lower_order_nums < 2
+            or self.lower_order_nums[output_index] < 2
             or lower_order_second
         ):
-            print('so: ', model_output.dim())
+            print("so: ", model_output.shape)
             timestep_list = [self.timesteps[step_index - 1], timestep]
             prev_sample = self.multistep_dpm_solver_second_order_update(
                 self.model_outputs[output_index], timestep_list, prev_timestep, sample
@@ -650,8 +650,8 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
                 self.model_outputs[output_index], timestep_list, prev_timestep, sample
             )
 
-        if self.lower_order_nums < self.config.solver_order:
-            self.lower_order_nums += 1
+        if self.lower_order_nums[output_index] < self.config.solver_order:
+            self.lower_order_nums[output_index] += 1
 
         if not return_dict:
             return (prev_sample,)
