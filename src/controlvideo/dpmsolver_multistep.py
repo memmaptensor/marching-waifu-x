@@ -370,6 +370,9 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         Returns:
             `torch.FloatTensor`: the converted model output.
         """
+        sample = sample.to('cuda')
+        model_output = model_output.to('cuda')
+
         # DPM-Solver++ needs to solve an integral of the data prediction model.
         if self.config.algorithm_type == "dpmsolver++":
             if self.config.prediction_type == "epsilon":
