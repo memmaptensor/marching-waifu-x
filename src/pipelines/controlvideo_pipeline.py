@@ -100,8 +100,8 @@ class controlvideo_pipeline:
 
         pipe.enable_vae_slicing()
         pipe.enable_xformers_memory_efficient_attention()
-        pipe.to("cuda")
-        # pipe.enable_model_cpu_offload()
+        # pipe.to("cuda")
+        pipe.enable_model_cpu_offload()
         # pipe.enable_sequential_cpu_offload()
 
         # Inference
