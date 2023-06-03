@@ -619,7 +619,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
 
         model_output = self.convert_model_output(model_output, timestep, sample)
         for i in range(self.config.solver_order - 1):
-            if model_output is not None:
+            if model_output[i + 1] is not None:
                 self.model_outputs[i + 1] = expand_dims(
                     self.model_outputs[i + 1], model_output.dim()
                 )
