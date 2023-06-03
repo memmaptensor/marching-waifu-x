@@ -1,4 +1,3 @@
-import math
 from dataclasses import dataclass
 from typing import Callable, Optional
 
@@ -11,7 +10,6 @@ from diffusers.models.cross_attention import CrossAttention
 from diffusers.utils import BaseOutput
 from diffusers.utils.import_utils import is_xformers_available
 from einops import rearrange, repeat
-from positional_encodings.torch_encodings import PositionalEncoding2D
 from torch import nn
 
 

@@ -6,7 +6,6 @@ from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 import numpy as np
 import PIL.Image
 import torch
-import torchvision
 from diffusers import AutoencoderKL, DiffusionPipeline, ModelMixin, logging
 from diffusers.loaders import LoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL
@@ -740,11 +739,7 @@ class ControlVideoPipeline(
             - self.scheduler.config.num_train_timesteps
             // self.scheduler.num_inference_steps
         )
-        alpha_prod_t_prev = (
-            self.scheduler.alphas_cumprod[prev_timestep]
-            if prev_timestep >= 0
-            else self.scheduler.alphas_cumprod[0]
-        )
+        alpha_prod_t_prev = self.scheduler.alphas_cumprod[max(0, prev_timestep)]
         return alpha_prod_t_prev
 
     def get_slide_window_indices(self, video_length, window_size):

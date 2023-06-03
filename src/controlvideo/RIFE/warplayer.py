@@ -29,7 +29,7 @@ def warp(tenInput, tenFlow):
     )
 
     g = (backwarp_tenGrid[k] + tenFlow).permute(0, 2, 3, 1).to(dtype=tenInput.dtype)
-    return torch.nn.functional.grid_sample(
+    return nn.functional.grid_sample(
         input=tenInput,
         grid=g,
         mode="bilinear",

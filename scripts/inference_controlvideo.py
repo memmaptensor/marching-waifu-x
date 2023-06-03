@@ -91,7 +91,7 @@ def get_args():
     parser.add_argument(
         "--window_size",
         type=int,
-        default=None,
+        default=-1,
         help="Gamma, controlling the window size in hierachical sampling, defaults to sqrt(video_length)",
     )
     parser.add_argument(
@@ -103,7 +103,7 @@ def get_args():
     parser.add_argument(
         "--seed",
         type=int,
-        default=None,
+        default=-1,
         help="Random seed of generator, defaults to a random seed",
     )
 
@@ -142,9 +142,9 @@ if __name__ == "__main__":
         args.num_inference_steps,
         args.guidance_scale,
         args.smoother_steps.split(","),
-        args.window_size,
+        args.window_size if args.window_size != -1 else None,
         args.controlnet_conditioning_scale,
-        args.seed,
+        args.seed if args.seed != -1 else None,
     )
 
     # Save
