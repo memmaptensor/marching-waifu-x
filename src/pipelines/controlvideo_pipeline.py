@@ -21,7 +21,9 @@ from src.controlvideo.unet import UNet3DConditionModel
 
 class controlvideo_pipeline:
     @torch.no_grad()
-    def __init__(self, sd_repo, vae_repo, controlnet_repo, ifnet_path, cache_dir):
+    def __init__(
+        self, sd_repo, vae_repo, controlnet_repo, ifnet_path, cache_dir, gen_indices
+    ):
         # Cache model weights
         sd_path = snapshot_download(
             sd_repo, cache_dir=cache_dir, local_dir_use_symlinks=False
@@ -40,7 +42,10 @@ class controlvideo_pipeline:
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
         self.scheduler = DPMSolverMultistepScheduler.from_pretrained(
-            sd_path, subfolder="scheduler", use_karras_sigmas=True
+            sd_path,
+            subfolder="scheduler",
+            use_karras_sigmas=True,
+            gen_indices=gen_indices,
         )
         self.compel = Compel(
             self.tokenizer,

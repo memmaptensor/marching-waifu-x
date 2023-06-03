@@ -1030,7 +1030,7 @@ class ControlVideoPipeline(
                     noise_pred[:, :, key_frame_indices],
                     t,
                     latents[:, :, key_frame_indices],
-                    True,
+                    0,
                     **extra_step_kwargs,
                 )
                 latents[:, :, key_frame_indices] = key_step_dict.prev_sample
@@ -1080,7 +1080,7 @@ class ControlVideoPipeline(
                         noise_pred[:, :, frame_ids],
                         t,
                         latents[:, :, frame_ids],
-                        False,
+                        f_i + 1,
                         **extra_step_kwargs,
                     )
                     latents[:, :, frame_ids] = step_dict.prev_sample

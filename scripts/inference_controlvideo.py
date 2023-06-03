@@ -120,6 +120,13 @@ if __name__ == "__main__":
         args.controlnet_repo,
         args.ifnet_path,
         args.cache_dir,
+        args.video_length
+        // (
+            args.window_size
+            if args.window_size != -1
+            else int(np.sqrt(args.video_length))
+        )
+        + 2,
     )
 
     # Load the output paths and ControlNet conditioning images
