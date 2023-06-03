@@ -6,7 +6,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 from diffusers import ModelMixin
 from diffusers.configuration_utils import ConfigMixin, register_to_config
-from diffusers.models.cross_attention import AttnProcessor
+from diffusers.models.attention_processor import AttnProcessor
 from diffusers.models.embeddings import TimestepEmbedding, Timesteps
 from diffusers.models.unet_2d_condition import UNet2DConditionModel
 from diffusers.utils import BaseOutput, logging

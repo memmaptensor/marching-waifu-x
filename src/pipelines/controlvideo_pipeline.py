@@ -39,14 +39,14 @@ class controlvideo_pipeline:
             sd_path, subfolder="text_encoder"
         ).to(dtype=torch.float16)
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
-        self.scheduler = DPMSolverMultistepScheduler.from_config(
+        self.scheduler = DPMSolverMultistepScheduler.from_pretrained(
             sd_path, subfolder="scheduler", use_karras_sigmas=True
         )
         self.compel = Compel(
             self.tokenizer,
             self.text_encoder,
             truncate_long_prompts=False,
-            device="cuda:0",
+            device="cuda",
         )
         self.unet = UNet3DConditionModel.from_pretrained_2d(
             sd_path, subfolder="unet"
@@ -100,7 +100,8 @@ class controlvideo_pipeline:
 
         pipe.enable_vae_slicing()
         pipe.enable_xformers_memory_efficient_attention()
-        pipe.enable_model_cpu_offload()
+        pipe.to("cuda")
+        # pipe.enable_model_cpu_offload()
         # pipe.enable_sequential_cpu_offload()
 
         # Inference
