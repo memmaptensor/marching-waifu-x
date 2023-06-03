@@ -42,6 +42,18 @@ def betas_for_alpha_bar(num_diffusion_timesteps, max_beta=0.999):
     return torch.tensor(betas, dtype=torch.float32)
 
 
+def expand_dims(v, dims):
+    """
+    Expand the tensor `v` to the dim `dims`.
+    Args:
+        `v`: a PyTorch tensor with shape [N].
+        `dim`: a `int`.
+    Returns:
+        a PyTorch tensor with shape [N, 1, 1, ..., 1] and the total dimension is `dims`.
+    """
+    return v[(...,) + (None,) * (dims - 1)]
+
+
 @dataclass
 class DPMSolverMultistepSchedulerOutput(BaseOutput):
     """
@@ -362,11 +374,17 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         if self.config.algorithm_type == "dpmsolver++":
             if self.config.prediction_type == "epsilon":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
+                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
+                    sigma_t, sample.dim()
+                )
                 x0_pred = (sample - sigma_t * model_output) / alpha_t
             elif self.config.prediction_type == "sample":
                 x0_pred = model_output
             elif self.config.prediction_type == "v_prediction":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
+                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
+                    sigma_t, sample.dim()
+                )
                 x0_pred = alpha_t * sample - sigma_t * model_output
             else:
                 raise ValueError(
@@ -384,10 +402,16 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
                 return model_output
             elif self.config.prediction_type == "sample":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
+                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
+                    sigma_t, sample.dim()
+                )
                 epsilon = (sample - alpha_t * model_output) / sigma_t
                 return epsilon
             elif self.config.prediction_type == "v_prediction":
                 alpha_t, sigma_t = self.alpha_t[timestep], self.sigma_t[timestep]
+                alpha_t, sigma_t = expand_dims(alpha_t, sample.dim()), expand_dims(
+                    sigma_t, sample.dim()
+                )
                 epsilon = alpha_t * model_output + sigma_t * sample
                 return epsilon
             else:
