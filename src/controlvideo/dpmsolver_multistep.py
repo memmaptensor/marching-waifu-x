@@ -42,18 +42,6 @@ def betas_for_alpha_bar(num_diffusion_timesteps, max_beta=0.999):
     return torch.tensor(betas, dtype=torch.float32)
 
 
-def expand_dims(v, dims):
-    """
-    Expand the tensor `v` to the dim `dims`.
-    Args:
-        `v`: a PyTorch tensor with shape [N].
-        `dim`: a `int`.
-    Returns:
-        a PyTorch tensor with shape [N, 1, 1, ..., 1] and the total dimension is `dims`.
-    """
-    return v[(...,) + (None,) * (dims - 1)]
-
-
 @dataclass
 class DPMSolverMultistepSchedulerOutput(BaseOutput):
     """
@@ -217,7 +205,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             0, num_train_timesteps - 1, num_train_timesteps, dtype=np.float32
         )[::-1].copy()
         self.timesteps = torch.from_numpy(timesteps)
-        self.model_outputs = [None] * solver_order
+        self.model_outputs = [[None] * solver_order, [None] * solver_order]
         self.lower_order_nums = 0
         self.use_karras_sigmas = use_karras_sigmas
 
@@ -261,8 +249,15 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         self.num_inference_steps = len(timesteps)
 
         self.model_outputs = [
-            None,
-        ] * self.config.solver_order
+            [
+                None,
+            ]
+            * self.config.solver_order,
+            [
+                None,
+            ]
+            * self.config.solver_order,
+        ]
         self.lower_order_nums = 0
 
     # Copied from diffusers.schedulers.scheduling_ddpm.DDPMScheduler._threshold_sample
@@ -572,6 +567,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         model_output: torch.FloatTensor,
         timestep: int,
         sample: torch.FloatTensor,
+        keyframe_step: bool,
         return_dict: bool = True,
     ) -> Union[DPMSolverMultistepSchedulerOutput, Tuple]:
         """
@@ -617,14 +613,13 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             and len(self.timesteps) < 15
         )
 
+        output_index = 0 if keyframe_step else 1
         model_output = self.convert_model_output(model_output, timestep, sample)
         for i in range(self.config.solver_order - 1):
-            if self.model_outputs[i + 1] is not None:
-                self.model_outputs[i + 1] = self.model_outputs[i + 1].reshape(
-                    model_output.shape
-                )
-            self.model_outputs[i] = self.model_outputs[i + 1]
-        self.model_outputs[-1] = model_output
+            self.model_outputs[output_index][i] = self.model_outputs[output_index][
+                i + 1
+            ]
+        self.model_outputs[output_index][-1] = model_output
 
         if (
             self.config.solver_order == 1
@@ -641,7 +636,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         ):
             timestep_list = [self.timesteps[step_index - 1], timestep]
             prev_sample = self.multistep_dpm_solver_second_order_update(
-                self.model_outputs, timestep_list, prev_timestep, sample
+                self.model_outputs[output_index], timestep_list, prev_timestep, sample
             )
         else:
             timestep_list = [
@@ -650,7 +645,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
                 timestep,
             ]
             prev_sample = self.multistep_dpm_solver_third_order_update(
-                self.model_outputs, timestep_list, prev_timestep, sample
+                self.model_outputs[output_index], timestep_list, prev_timestep, sample
             )
 
         if self.lower_order_nums < self.config.solver_order:

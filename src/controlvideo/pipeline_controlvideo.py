@@ -1025,12 +1025,12 @@ class ControlVideoPipeline(
                         noise_pred_text - noise_pred_uncond
                     )
 
-                print('kf: ', key_frame_indices)
                 # compute the previous noisy sample x_t -> x_t-1
                 key_step_dict = self.scheduler.step(
                     noise_pred[:, :, key_frame_indices],
                     t,
                     latents[:, :, key_frame_indices],
+                    True,
                     **extra_step_kwargs,
                 )
                 latents[:, :, key_frame_indices] = key_step_dict.prev_sample
@@ -1075,12 +1075,12 @@ class ControlVideoPipeline(
                             noise_pred_text - noise_pred_uncond
                         )
 
-                    print('fi: ', frame_ids)
                     # compute the previous noisy sample x_t -> x_t-1
                     step_dict = self.scheduler.step(
                         noise_pred[:, :, frame_ids],
                         t,
                         latents[:, :, frame_ids],
+                        False,
                         **extra_step_kwargs,
                     )
                     latents[:, :, frame_ids] = step_dict.prev_sample
