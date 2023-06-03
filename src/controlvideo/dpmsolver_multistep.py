@@ -626,7 +626,6 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             or self.lower_order_nums[output_index] < 1
             or lower_order_final
         ):
-            print("fo: ", model_output.shape)
             prev_sample = self.dpm_solver_first_order_update(
                 model_output, timestep, prev_timestep, sample
             )
@@ -635,7 +634,6 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             or self.lower_order_nums[output_index] < 2
             or lower_order_second
         ):
-            print("so: ", model_output.shape)
             timestep_list = [self.timesteps[step_index - 1], timestep]
             prev_sample = self.multistep_dpm_solver_second_order_update(
                 self.model_outputs[output_index], timestep_list, prev_timestep, sample
