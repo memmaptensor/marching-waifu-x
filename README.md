@@ -20,8 +20,9 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 - [x] Batch inference
 - [x] 1st-order MultistepDPM++ Karras
 - [x] Higher-order MultistepDPM++ Karras
-- [ ] MultiControlNet + Multiprompt
-- [ ] Reconsider DeepDanbooru
+- [ ] Softmult. ControlNet + MultiControlNet w/ individual scales + Multiprompt
+- [ ] Upscaled preview + preview matrix
+- [ ] High.res fix pipe (lower. res generation -> upscale -> higher. res generation -> upscale)
 - [ ] Fix blender base model
 - [ ] Grounding DINO + SAM
 - [ ] InstantNGP
