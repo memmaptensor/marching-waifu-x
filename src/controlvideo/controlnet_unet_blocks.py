@@ -156,7 +156,7 @@ class UNetMidBlock3DCrossAttn(nn.Module):
             resnet_groups if resnet_groups is not None else min(in_channels // 4, 32)
         )
 
-        # there is always at least one resnet
+        # There is always at least one resnet
         resnets = [
             ResnetBlock3D(
                 in_channels=in_channels,
@@ -524,7 +524,7 @@ class CrossAttnUpBlock3D(nn.Module):
         cross_attention_kwargs=None,
     ):
         for resnet, attn in zip(self.resnets, self.attentions):
-            # pop res hidden states
+            # Pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
             hidden_states = torch.cat([hidden_states, res_hidden_states], dim=1)
@@ -615,7 +615,7 @@ class UpBlock3D(nn.Module):
         self, hidden_states, res_hidden_states_tuple, temb=None, upsample_size=None
     ):
         for resnet in self.resnets:
-            # pop res hidden states
+            # Pop res hidden states
             res_hidden_states = res_hidden_states_tuple[-1]
             res_hidden_states_tuple = res_hidden_states_tuple[:-1]
             hidden_states = torch.cat([hidden_states, res_hidden_states], dim=1)

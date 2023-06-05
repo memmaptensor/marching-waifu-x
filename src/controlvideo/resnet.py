@@ -62,12 +62,11 @@ class Upsample3D(nn.Module):
         if dtype == torch.bfloat16:
             hidden_states = hidden_states.to(torch.float32)
 
-        # upsample_nearest_nhwc fails with large batch sizes. see https://github.com/huggingface/diffusers/issues/984
+        # Upsample_nearest_nhwc fails with large batch sizes. see https://github.com/huggingface/diffusers/issues/984
         if hidden_states.shape[0] >= 64:
             hidden_states = hidden_states.contiguous()
 
-        # if `output_size` is passed we force the interpolation output
-        # size and do not make use of `scale_factor=2`
+        # If `output_size` is passed we force the interpolation output size and do not make use of `scale_factor=2`
         if output_size is None:
             hidden_states = F.interpolate(
                 hidden_states, scale_factor=[1.0, 2.0, 2.0], mode="nearest"

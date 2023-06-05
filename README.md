@@ -6,7 +6,7 @@
     </a>
 </p>
 
-Complete 3D character + animation generation based on ControlVideo, Grounding DINO, SAM, InstantNGP, and T2M-GPT
+Complete 3D character + animation generation based on ControlVideo, Grounding DINO, Segment Anything, InstantNGP, and T2M-GPT
 
 - End-To-End
 <br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rossiyareich/marching-waifu-x/blob/main/ipynb/end_to_end.ipynb)
@@ -17,15 +17,16 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 
 ## To-do:
 - [x] ControlVideo + RealESRGAN pipeline
-- [x] Batch inference
 - [x] 1st-order MultistepDPM++ Karras
-- [x] Higher-order MultistepDPM++ Karras
-- [ ] Softmult. ControlNet + MultiControlNet w/ individual scales + Multiprompt
-- [ ] Upscaled preview + preview matrix
-- [ ] High.res fix pipe (lower. res generation -> upscale -> higher. res generation -> upscale)
-- [ ] Fix blender base model
-- [ ] Grounding DINO + SAM
+- [x] 2nd-order MultistepDPM++ Karras
+- [x] New generation scheme + format
+- [x] MultiControlNet
+- [x] Multiprompt
+- [x] Upscaled preview video
+- [ ] Grounding DINO + Segment Anything
 - [ ] InstantNGP
+- [ ] Fix blender base model
+- [ ] Update inference parameters
 - [ ] T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
 - [ ] Evaluation

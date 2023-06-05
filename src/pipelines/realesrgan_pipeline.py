@@ -14,8 +14,8 @@ class realesrgan_pipeline:
         self,
         outscale=4.0,
         tile=192,
-        tile_pad=16,
-        pre_pad=16,
+        tile_pad=10,
+        pre_pad=10,
         face_enhance=True,
         fp32=False,
         gpu_id=0,
@@ -72,6 +72,7 @@ class realesrgan_pipeline:
 
     @torch.no_grad()
     def __call__(self, img):
+        torch.cuda.empty_cache()
         img = image_wrapper(img, "pil").to_cv2()
 
         if self.face_enhancer is not None:

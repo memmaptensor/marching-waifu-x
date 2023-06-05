@@ -77,18 +77,18 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         self.sample_size = sample_size
         time_embed_dim = block_out_channels[0] * 4
 
-        # input
+        # Input
         self.conv_in = InflatedConv3d(
             in_channels, block_out_channels[0], kernel_size=3, padding=(1, 1)
         )
 
-        # time
+        # Time
         self.time_proj = Timesteps(block_out_channels[0], flip_sin_to_cos, freq_shift)
         timestep_input_dim = block_out_channels[0]
 
         self.time_embedding = TimestepEmbedding(timestep_input_dim, time_embed_dim)
 
-        # class embedding
+        # Class embedding
         if class_embed_type is None and num_class_embeds is not None:
             self.class_embedding = nn.Embedding(num_class_embeds, time_embed_dim)
         elif class_embed_type == "timestep":
@@ -108,7 +108,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         if isinstance(attention_head_dim, int):
             attention_head_dim = (attention_head_dim,) * len(down_block_types)
 
-        # down
+        # Down
         output_channel = block_out_channels[0]
         for i, down_block_type in enumerate(down_block_types):
             input_channel = output_channel
@@ -136,7 +136,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             )
             self.down_blocks.append(down_block)
 
-        # mid
+        # Mid
         if mid_block_type == "UNetMidBlock3DCrossAttn":
             self.mid_block = UNetMidBlock3DCrossAttn(
                 in_channels=block_out_channels[-1],
@@ -155,10 +155,10 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         else:
             raise ValueError(f"unknown mid_block_type : {mid_block_type}")
 
-        # count how many layers upsample the videos
+        # Count how many layers upsample the videos
         self.num_upsamplers = 0
 
-        # up
+        # Up
         reversed_block_out_channels = list(reversed(block_out_channels))
         reversed_attention_head_dim = list(reversed(attention_head_dim))
         only_cross_attention = list(reversed(only_cross_attention))
@@ -172,7 +172,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                 min(i + 1, len(block_out_channels) - 1)
             ]
 
-            # add upsample block for all BUT final layer
+            # Add upsample block for all BUT final layer
             if not is_final_block:
                 add_upsample = True
                 self.num_upsamplers += 1
@@ -201,7 +201,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             self.up_blocks.append(up_block)
             prev_output_channel = output_channel
 
-        # out
+        # Out
         self.conv_norm_out = nn.GroupNorm(
             num_channels=block_out_channels[0], num_groups=norm_num_groups, eps=norm_eps
         )
@@ -233,18 +233,18 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             for child in module.children():
                 fn_recursive_retrieve_slicable_dims(child)
 
-        # retrieve number of attention layers
+        # Retrieve number of attention layers
         for module in self.children():
             fn_recursive_retrieve_slicable_dims(module)
 
         num_slicable_layers = len(sliceable_head_dims)
 
         if slice_size == "auto":
-            # half the attention head size is usually a good trade-off between
+            # Half the attention head size is usually a good trade-off between
             # speed and memory
             slice_size = [dim // 2 for dim in sliceable_head_dims]
         elif slice_size == "max":
-            # make smallest slice possible
+            # Make smallest slice possible
             slice_size = num_slicable_layers * [1]
 
         slice_size = (
@@ -319,7 +319,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         # on the fly if necessary.
         default_overall_up_factor = 2**self.num_upsamplers
 
-        # upsample size should be forwarded when sample is not a multiple of `default_overall_up_factor`
+        # Upsample size should be forwarded when sample is not a multiple of `default_overall_up_factor`
         forward_upsample_size = False
         upsample_size = None
 
@@ -327,16 +327,16 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             logger.info("Forward upsample size to force interpolation output size.")
             forward_upsample_size = True
 
-        # prepare attention_mask
+        # Prepare attention_mask
         if attention_mask is not None:
             attention_mask = (1 - attention_mask.to(sample.dtype)) * -10000.0
             attention_mask = attention_mask.unsqueeze(1)
 
-        # center input if necessary
+        # Center input if necessary
         if self.config.center_input_sample:
             sample = 2 * sample - 1.0
 
-        # time
+        # Time
         timesteps = timestep
         if not torch.is_tensor(timesteps):
             # This would be a good case for the `match` statement (Python 3.10+)
@@ -349,14 +349,14 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         elif len(timesteps.shape) == 0:
             timesteps = timesteps[None].to(sample.device)
 
-        # broadcast to batch dimension in a way that's compatible with ONNX/Core ML
+        # Broadcast to batch dimension in a way that's compatible with ONNX/Core ML
         timesteps = timesteps.expand(sample.shape[0])
 
         t_emb = self.time_proj(timesteps)
 
-        # timesteps does not contain any weights and will always return f32 tensors
+        # Timesteps does not contain any weights and will always return f32 tensors
         # but time_embedding might actually be running in fp16. so we need to cast here.
-        # there might be better ways to encapsulate this.
+        # There might be better ways to encapsulate this.
         t_emb = t_emb.to(dtype=self.dtype)
         emb = self.time_embedding(t_emb)
 
@@ -372,10 +372,10 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             class_emb = self.class_embedding(class_labels).to(dtype=self.dtype)
             emb = emb + class_emb
 
-        # pre-process
+        # Pre-process
         sample = self.conv_in(sample)
 
-        # down
+        # Down
         down_block_res_samples = (sample,)
         for downsample_block in self.down_blocks:
             if (
@@ -405,7 +405,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
 
             down_block_res_samples = new_down_block_res_samples
 
-        # mid
+        # Mid
         sample = self.mid_block(
             sample,
             emb,
@@ -417,7 +417,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         if mid_block_additional_residual is not None:
             sample += mid_block_additional_residual
 
-        # up
+        # Up
         for i, upsample_block in enumerate(self.up_blocks):
             is_final_block = i == len(self.up_blocks) - 1
 
@@ -426,7 +426,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                 : -len(upsample_block.resnets)
             ]
 
-            # if we have not reached the final block and need to forward the
+            # If we have not reached the final block and need to forward the
             # upsample size, we do it here
             if not is_final_block and forward_upsample_size:
                 upsample_size = down_block_res_samples[-1].shape[2:]
@@ -451,7 +451,7 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
                     res_hidden_states_tuple=res_samples,
                     upsample_size=upsample_size,
                 )
-        # post-process
+        # Post-process
         sample = self.conv_norm_out(sample)
         sample = self.conv_act(sample)
         sample = self.conv_out(sample)
@@ -462,7 +462,9 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
         return UNet3DConditionOutput(sample=sample)
 
     @classmethod
-    def from_pretrained_2d(cls, pretrained_model_path, subfolder=None):
+    def from_pretrained_2d(
+        cls, pretrained_model_path, subfolder=None, use_safetensors=True
+    ):
         if subfolder is not None:
             pretrained_model_path = os.path.join(pretrained_model_path, subfolder)
 
@@ -486,16 +488,26 @@ class UNet3DConditionModel(ModelMixin, ConfigMixin):
             "CrossAttnUpBlock3D",
         ]
 
-        from diffusers.utils import SAFETENSORS_WEIGHTS_NAME
+        if use_safetensors:
+            from diffusers.utils import SAFETENSORS_WEIGHTS_NAME
+            from safetensors.torch import load_file
 
-        model = cls.from_config(config)
-        model_file = os.path.join(pretrained_model_path, SAFETENSORS_WEIGHTS_NAME)
-        if not os.path.isfile(model_file):
-            raise RuntimeError(f"{model_file} does not exist")
+            model = cls.from_config(config)
+            model_file = os.path.join(pretrained_model_path, SAFETENSORS_WEIGHTS_NAME)
+            if not os.path.isfile(model_file):
+                raise RuntimeError(f"{model_file} does not exist")
 
-        from safetensors.torch import load_file
+            state_dict = load_file(model_file, "cpu")
+        else:
+            from diffusers.utils import WEIGHTS_NAME
 
-        state_dict = load_file(model_file, "cpu")
+            model = cls.from_config(config)
+            model_file = os.path.join(pretrained_model_path, WEIGHTS_NAME)
+            if not os.path.isfile(model_file):
+                raise RuntimeError(f"{model_file} does not exist")
+
+            state_dict = torch.load(model_file, "cpu")
+
         # for k, v in model.state_dict().items():
         #     if '_temp.' in k:
         #         state_dict.update({k: v})

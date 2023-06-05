@@ -1,10 +1,10 @@
 import argparse
-import glob
+import json
 import os
-import pathlib
 import sys
 
 import PIL.Image
+import torch
 
 sys.path.append("..")
 
@@ -14,146 +14,92 @@ from src.pipelines.controlvideo_pipeline import *
 def get_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--out_path", type=str, required=True, help="Directory of output"
-    )
-    parser.add_argument(
-        "--sd_repo",
+        "--settings_path",
         type=str,
         required=True,
-        help="huggingface repository containing the main model weights",
+        help="Path to file containing inference settings",
     )
-    parser.add_argument(
-        "--vae_repo",
-        type=str,
-        required=True,
-        help="huggingface repository containing the VAE weights",
-    )
-    parser.add_argument(
-        "--controlnet_repo",
-        type=str,
-        required=True,
-        help="huggingface repository containing the ControlNet weights",
-    )
-    parser.add_argument(
-        "--ifnet_path", type=str, required=True, help="Path to the IFNet weights"
-    )
-    parser.add_argument(
-        "--cache_dir",
-        type=str,
-        required=True,
-        help="Directory to contain cached huggingface model weights",
-    )
-    parser.add_argument(
-        "--prompt",
-        type=str,
-        required=True,
-        help="Prompt to the target video in the Invoke.AI format",
-    )
-    parser.add_argument(
-        "--negative_prompt",
-        type=str,
-        required=True,
-        help="Negative prompt to the target video in the Invoke.AI format",
-    )
-    parser.add_argument(
-        "--textual_inversion_path",
-        type=str,
-        required=True,
-        help="Directory containing textual inversion embeddings",
-    )
-    parser.add_argument(
-        "--controlnet_conditioning_path",
-        type=str,
-        required=True,
-        help="Directory containing controlnet conditioning images",
-    )
-    parser.add_argument(
-        "--video_length", type=int, default=16, help="Length of synthesized video"
-    )
-    parser.add_argument(
-        "--num_inference_steps",
-        type=int,
-        default=50,
-        help="Number of timesteps to take during DPM sampling",
-    )
-    parser.add_argument(
-        "--guidance_scale",
-        type=float,
-        default=10,
-        help="Classifier-free guidance scale",
-    )
-    parser.add_argument(
-        "--smoother_steps",
-        type=str,
-        default="19,20",
-        help="Timesteps at which using interleaved-frame smoother",
-    )
-    parser.add_argument(
-        "--window_size",
-        type=int,
-        default=-1,
-        help="Gamma, controlling the window size in hierachical sampling, defaults to sqrt(video_length)",
-    )
-    parser.add_argument(
-        "--controlnet_conditioning_scale",
-        type=float,
-        default=1.0,
-        help="Coefficient controlling how much the ControlNet weights affect the main SD UNet",
-    )
-    parser.add_argument(
-        "--seed",
-        type=int,
-        default=-1,
-        help="Random seed of generator, defaults to a random seed",
-    )
-
     args = parser.parse_args()
     return args
 
 
 if __name__ == "__main__":
     args = get_args()
+    with open(args.settings_path, "r") as f:
+        conf = json.load(f)
 
+    # Load ControlNet conditioning images
+    controlnet_prefixes = conf["controlnet"]["pipe"].keys()
+    controlnet_repositories = conf["controlnet"]["pipe"].values()
+    controlnet_conditions = []
+    for i in range(conf["video"]["length"]):
+        controlnet_condition = []
+        for controlnet_prefix in controlnet_prefixes:
+            filepath = os.path.join(
+                conf["paths"]["condition_path"], f"{controlnet_prefix}{(i+1):04}.png"
+            )
+            controlnet_condition.append(PIL.Image.open(filepath))
+        controlnet_conditions.append(controlnet_condition)
+
+    # Load video attributes
+    num_clips = len(conf["video"]["clips"])
+
+    # Load pipeline
     pipe = controlvideo_pipeline(
-        args.sd_repo,
-        args.vae_repo,
-        args.controlnet_repo,
-        args.ifnet_path,
-        args.cache_dir,
-        args.video_length
-        // (
-            args.window_size
-            if args.window_size != -1
-            else int(np.sqrt(args.video_length))
-        )
-        + 2,
+        conf["repositories"]["sd"],
+        conf["repositories"]["vae"],
+        controlnet_repositories,
+        conf["paths"]["ifnet_path"],
+        conf["paths"]["cache_dir"],
+        num_clips + 1,
     )
 
-    # Load the output paths and ControlNet conditioning images
-    output_paths = []
-    controlnet_conditions = []
-    for filepath in sorted(
-        glob.glob(os.path.join(args.controlnet_conditioning_path, "*.png"))
-    ):
-        pl = pathlib.Path(filepath)
-        output_paths.append(os.path.join(args.out_path, f"{pl.stem}.png"))
-        controlnet_conditions.append(PIL.Image.open(filepath))
+    # Load video attributes
+    clips = [
+        (clip["attn_frames"], clip["clip_frames"]) for clip in conf["video"]["clips"]
+    ]
+    clip_prompts = [clip["prompt"] for clip in conf["video"]["clips"]]
+    clip_negative_prompts = [clip["negative_prompt"] for clip in conf["video"]["clips"]]
+
+    # Prepare generators
+    seed = conf["video"]["seed"]
+    same_frame_noise = conf["video"]["same_frame_noise"]
+    assert (seed is not None) and (not same_frame_noise)
+    if same_frame_noise:
+        generator = torch.Generator("cuda")
+        if seed is None:
+            seed = generator.seed()
+        else:
+            generator = generator.manual_seed(seed)
+        print(f"Using seed: {seed}")
+    else:
+        generators = []
+        for _ in range(conf["video"]["length"]):
+            generator = torch.Generator("cuda")
+            seed = generator.seed()
+            generators.append(generator)
+            print(f"Using seed: {seed}")
+        generator = generators
 
     # Inference
-    output_video = pipe(
-        args.prompt,
-        args.negative_prompt,
-        args.textual_inversion_path,
+    video = pipe(
+        conf["paths"]["textual_inversion_path"],
+        conf["video"]["keyframes"]["frames"],
+        conf["video"]["keyframes"]["prompt"],
+        conf["video"]["keyframes"]["negative_prompt"],
+        clips,
+        clip_prompts,
+        clip_negative_prompts,
         controlnet_conditions,
-        args.video_length,
-        args.num_inference_steps,
-        args.guidance_scale,
-        args.smoother_steps.split(","),
-        args.window_size if args.window_size != -1 else None,
-        args.controlnet_conditioning_scale,
-        args.seed if args.seed != -1 else None,
-    )
+        conf["controlnet"]["scales"],
+        conf["controlnet"]["exp"],
+        conf["video"]["length"],
+        generator,
+        conf["video"]["num_inference_steps"],
+        conf["video"]["guidance_scale"],
+        conf["video"]["smooth_steps"],
+    ).video
 
     # Save
-    for i, output_frame in enumerate(output_video):
-        output_frame.save(output_paths[i])
+    for i, frame in enumerate(video):
+        frame.save(os.path.join(conf["paths"]["out_path"], f"{(i+1):04}.png"))

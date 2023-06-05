@@ -1,0 +1,15 @@
+{
+    "paths": {
+        "in_path": "../data/dataset/nerf/original/",
+        "out_path": "../data/dataset/nerf/train/"
+    },
+    "upscale": {
+        "outscale": 4.0,
+        "tile": 192,
+        "tile_pad": 10,
+        "pre_pad": 10,
+        "face_enhance": true,
+        "fp32": false,
+        "gpu_id": 0
+    }
+}

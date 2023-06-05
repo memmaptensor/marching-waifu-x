@@ -81,7 +81,7 @@ class Transformer3DModel(ModelMixin, ConfigMixin):
             ]
         )
 
-        # 4. Define output layers
+        # Define output layers
         if use_linear_projection:
             self.proj_out = nn.Linear(in_channels, inner_dim)
         else:
@@ -354,7 +354,7 @@ class FullyFrameAttention(nn.Module):
         self.scale = dim_head**-0.5
 
         self.heads = heads
-        # for slice_size > 0 the attention score computation
+        # For slice_size > 0 the attention score computation
         # is split across the batch axis to save memory
         # You can set slice_size with `set_attention_slice`
         self.sliceable_head_dim = heads
@@ -436,13 +436,13 @@ class FullyFrameAttention(nn.Module):
 
         attention_probs = attention_scores.softmax(dim=-1)
 
-        # cast back to the original dtype
+        # Cast back to the original dtype
         attention_probs = attention_probs.to(value.dtype)
 
-        # compute attention output
+        # Compute attention output
         hidden_states = torch.bmm(attention_probs, value)
 
-        # reshape hidden_states
+        # Reshape hidden_states
         hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
         return hidden_states
 
@@ -491,18 +491,17 @@ class FullyFrameAttention(nn.Module):
 
             attn_slice = attn_slice.softmax(dim=-1)
 
-            # cast back to the original dtype
+            # Cast back to the original dtype
             attn_slice = attn_slice.to(value.dtype)
             attn_slice = torch.bmm(attn_slice, value[start_idx:end_idx])
 
             hidden_states[start_idx:end_idx] = attn_slice
 
-        # reshape hidden_states
+        # Reshape hidden_states
         hidden_states = self.reshape_batch_dim_to_heads(hidden_states)
         return hidden_states
 
     def _memory_efficient_attention_xformers(self, query, key, value, attention_mask):
-        # TODO attention_mask
         query = query.contiguous()
         key = key.contiguous()
         value = value.contiguous()
@@ -570,7 +569,7 @@ class FullyFrameAttention(nn.Module):
                 attention_mask = F.pad(attention_mask, (0, target_length), value=0.0)
                 attention_mask = attention_mask.repeat_interleave(self.heads, dim=0)
 
-        # attention, what we cannot get enough of
+        # Attention, what we cannot get enough of
         if self._use_memory_efficient_attention_xformers:
             hidden_states = self._memory_efficient_attention_xformers(
                 query, key, value, attention_mask
@@ -585,10 +584,10 @@ class FullyFrameAttention(nn.Module):
                     query, key, value, sequence_length, dim, attention_mask
                 )
 
-        # linear proj
+        # Linear proj
         hidden_states = self.to_out[0](hidden_states)
 
-        # dropout
+        # Dropout
         hidden_states = self.to_out[1](hidden_states)
 
         # All frames
