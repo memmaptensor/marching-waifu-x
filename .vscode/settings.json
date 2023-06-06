@@ -1,0 +1,6 @@
+{
+    "python.analysis.extraPaths": [
+        "./ext/Real-ESRGAN",
+        "./ext/Grounded-Segment-Anything"
+    ]
+}
