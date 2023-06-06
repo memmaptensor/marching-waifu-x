@@ -24,9 +24,9 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 - [x] Multiprompt
 - [x] Upscaled preview video
 - [ ] Grounding DINO + Segment Anything
-- [ ] InstantNGP
 - [ ] Fix blender base model
 - [ ] Update inference parameters
+- [ ] InstantNGP
 - [ ] T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
 - [ ] Evaluation

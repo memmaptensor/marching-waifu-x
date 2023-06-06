@@ -1,2 +1,3 @@
+.vscode
 data/checkpoints
 !data/checkpoints/flownet.pkl

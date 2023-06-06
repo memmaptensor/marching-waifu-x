@@ -8,7 +8,7 @@ python -m pip install --upgrade pip
 pip install gdown ipykernel ipywidgets
 
 # Install PyTorch
-pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
+pip install torch torchvision torchaudio torchtext torchdata --index-url https://download.pytorch.org/whl/cu118
 
 : '
 # Build instant-ngp
