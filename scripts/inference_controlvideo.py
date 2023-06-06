@@ -103,3 +103,7 @@ if __name__ == "__main__":
     # Save
     for i, frame in enumerate(video):
         frame.save(os.path.join(conf["paths"]["out_path"], f"{(i+1):04}.png"))
+
+    del pipe
+    gc.collect()
+    torch.cuda.empty_cache()

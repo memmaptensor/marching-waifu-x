@@ -23,7 +23,7 @@ Complete 3D character + animation generation based on ControlVideo, Grounding DI
 - [x] MultiControlNet
 - [x] Multiprompt
 - [x] Upscaled preview video
-- [ ] Grounding DINO + Segment Anything
+- [x] Grounding DINO + Segment Anything
 - [ ] Fix blender base model
 - [ ] Update inference parameters
 - [ ] InstantNGP

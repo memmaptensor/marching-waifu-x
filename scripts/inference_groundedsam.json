@@ -1,0 +1,71 @@
+{
+    "paths": {
+        "in_path": "../data/dataset/nerf/train/",
+        "out_path": "../data/dataset/nerf/train/",
+        "cache_dir": "../data/checkpoints/",
+        "file_prefix": "dynamic_mask_"
+    },
+    "groundedsam": {
+        "device": "cuda",
+        "scale": 0.5,
+        "length": 64,
+        "clips": [
+            {
+                "clip_frames": [0, 1, 2, 3, 4, 5, 6],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [7, 8, 9, 10, 11, 12, 13, 14],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [15, 16, 17, 18, 19, 20, 21, 22],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [23, 24, 25, 26, 27, 28, 29, 30],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [31, 32, 33, 34, 35, 36, 37, 38],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [39, 40, 41, 42, 43, 44, 45, 46],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [47, 48, 49, 50, 51, 52, 53, 54],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            },
+            {
+                "clip_frames": [55, 56, 57, 58, 59, 60, 61, 62, 63],
+                "det_prompt": "",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25,
+                "merge_masks": true
+            }
+        ]
+    }
+}
