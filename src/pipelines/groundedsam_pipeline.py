@@ -150,7 +150,7 @@ class groundedsam_pipeline:
 
         if merge_masks:
             masks = torch.sum(masks, dim=0).unsqueeze(0)
-            masks = torch.where(masks > 0, True, False)
+            masks = torch.where(masks > 0, False, True) # Non-zero represents masked-away region
 
         # Simply choose the first mask, which will be refined in the future release
         mask = masks[0][0].cpu().numpy()

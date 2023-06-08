@@ -1,2 +1,6 @@
 data/checkpoints
 !data/checkpoints/flownet.pkl
+data/dataset/nerf
+!data/dataset/transforms.json
+data/instant-ngp
+data/ceres-solver-v2

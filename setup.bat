@@ -1,25 +1,14 @@
 :: -----------------------------------------------------
-:: Make sure anaconda is installed and 
-:: to run using conda run (conda env python=3.10)
-:: -----------------------------------------------------
+::
+:: Setup conda environment before installation with
+:: `conda create -n marching-waifu-x python=3.10`
+:: and run `setup.bat` with
+:: `conda run -n marching-waifu-x --no-capture-output setup.bat`
+:: 
 :: Make sure to have the following installed:
 ::  VS2022 build tools + CMake
-::  Latest NVIDIA drivers
+::  NVIDIA drivers
 ::  cuda-toolkit 11.8
 ::  cuDNN 8.9.1
+::
 :: -----------------------------------------------------
-
-:: Update submodules
-git submodule update --init --recursive
-
-:: Install 3rd party packages
-python -m pip install --upgrade pip
-pip install gdown ipykernel ipywidgets
-
-:: Install PyTorch
-pip install torch torchvision torchaudio torchtext torchdata --index-url https://download.pytorch.org/whl/cu118
-
-:: Build instant-ngp
-:: ... (TODO)
-    ::  Optix 7.7
-    ::  Vulkan SDK

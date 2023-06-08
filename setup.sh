@@ -1,14 +1,16 @@
 #! /bin/bash
 
 # -----------------------------------------------------
+#
 # Reboot after install!
-# -----------------------------------------------------
+# 
+# Setup conda environment after installation with
+# `conda create -n marching-waifu-x python=3.10`
+# 
 # Make sure to copy over the following files to ~/
 # cudnn-local-repo-ubuntu2204-8.9.1.23_1.0-1_amd64.deb
+#
 # ----------------------------------------------------- 
-
-# Update submodules
-git submodule update --init --recursive
 
 # Setup prerequisites
 sudo apt update
