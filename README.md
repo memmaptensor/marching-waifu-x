@@ -43,7 +43,7 @@ Complete 3D character + animation generation based on ControlVideo, GroundingDIN
 - [x] Add more embeddings, increase resolution
 - [x] Switch out main checkpoint
 - [x] Fix setup scripts, separate notebooks into local windows, local linux, colab
-- [ ] Fix conditioning images
+- [ ] Fix conditioning images + bump dataset size to 100
 - [ ] Switch out InstantNGP for nvdiffrec
 - [ ] T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
