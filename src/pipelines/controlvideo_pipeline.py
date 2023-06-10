@@ -57,14 +57,6 @@ class controlvideo_pipeline:
             num_indices=num_indices,
         )
 
-        # Load text encoder
-        self.compel = Compel(
-            self.tokenizer,
-            self.text_encoder,
-            truncate_long_prompts=False,
-            device="cuda",
-        )
-
         # Load main UNet
         self.unet = UNet3DConditionModel.from_pretrained_2d(
             sd_path, subfolder="unet", use_safetensors=True
@@ -111,11 +103,40 @@ class controlvideo_pipeline:
             interpolater=self.interpolator,
             scheduler=self.scheduler,
         )
-        pipe.enable_vae_slicing()
+
+        # Load text encoder
+        pipe.text_encoder.to("cuda")
+        compel = Compel(
+            pipe.tokenizer,
+            pipe.text_encoder,
+            truncate_long_prompts=False,
+            device="cuda",
+        )
+        keyframe_wembeds = compel.pad_conditioning_tensors_to_same_length(
+            [
+                compel.build_conditioning_tensor(keyframe_prompt),
+                compel.build_conditioning_tensor(keyframe_negative_prompt),
+            ]
+        )
+        clip_wembeds = [
+            compel.pad_conditioning_tensors_to_same_length(
+                [
+                    compel.build_conditioning_tensor(prompt),
+                    compel.build_conditioning_tensor(negative_prompt),
+                ]
+            )
+            for prompt, negative_prompt in zip(clip_prompts, clip_negative_prompts)
+        ]
+        del compel
+        pipe.text_encoder.to("cpu")
+        torch.cuda.empty_cache()
+
+        # Load pipeline optimizations
+        # pipe.enable_vae_slicing()
         pipe.enable_xformers_memory_efficient_attention()
         # pipe.to("cuda")
-        pipe.enable_model_cpu_offload()
-        # pipe.enable_sequential_cpu_offload()
+        # pipe.enable_model_cpu_offload()
+        pipe.enable_sequential_cpu_offload()
 
         # Load textual inversions
         for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
@@ -126,23 +147,6 @@ class controlvideo_pipeline:
                     token=pl.stem,
                     use_safetensors=(pl.suffix == ".safetensors"),
                 )
-
-        # Tokenize prompts
-        keyframe_wembeds = self.compel.pad_conditioning_tensors_to_same_length(
-            [
-                self.compel.build_conditioning_tensor(keyframe_prompt),
-                self.compel.build_conditioning_tensor(keyframe_negative_prompt),
-            ]
-        )
-        clip_wembeds = [
-            self.compel.pad_conditioning_tensors_to_same_length(
-                [
-                    self.compel.build_conditioning_tensor(prompt),
-                    self.compel.build_conditioning_tensor(negative_prompt),
-                ]
-            )
-            for prompt, negative_prompt in zip(clip_prompts, clip_negative_prompts)
-        ]
 
         video = pipe.generate_long_video(
             keyframes,
@@ -157,7 +161,7 @@ class controlvideo_pipeline:
             num_inference_steps,
             guidance_scale,
             smooth_steps,
-            eta,
+            eta=eta,
         ).video
 
         del pipe

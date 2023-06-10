@@ -39,7 +39,7 @@ class MultiControlNetModel3D(ModelMixin):
         sample: torch.FloatTensor,
         timestep: Union[torch.Tensor, float, int],
         encoder_hidden_states: torch.Tensor,
-        controlnet_cond: List[List[torch.tensor]],
+        controlnet_cond: List[torch.FloatTensor],
         conditioning_scale: List[float],
         class_labels: Optional[torch.Tensor] = None,
         timestep_cond: Optional[torch.Tensor] = None,
@@ -54,7 +54,7 @@ class MultiControlNetModel3D(ModelMixin):
                 sample,
                 timestep,
                 encoder_hidden_states,
-                torch.cat(image, dim=0),
+                image,
                 scale,
                 class_labels,
                 timestep_cond,
@@ -323,20 +323,20 @@ class ControlVideoPipeline(
         ]
 
         # 3. Prepare image
-        images = []
-        for i_img in controlnet_frames:
-            i_images = []
-            for ii_img in i_img:
-                ii_img = self._prepare_image(
-                    image=ii_img,
+        images = [[] for _ in range(len(controlnet_frames[0]))]
+        for cnet_frame in controlnet_frames:
+            for i, cnet_img in enumerate(cnet_frame):
+                image = self._prepare_image(
+                    image=cnet_img,
                     width=width,
                     height=height,
                     device=device,
                     dtype=self.controlnet.dtype,
                 )
-                i_images.append(ii_img)
-            images.append(torch.stack(i_images, dim=2))
-        controlnet_frames = images
+                images[i].append(image)
+        controlnet_frames = [None] * len(controlnet_frames[0])
+        for i, cnet_frames in enumerate(images):
+            controlnet_frames[i] = torch.stack(cnet_frames, dim=2)
 
         # 4. Prepare timesteps
         self.scheduler.set_timesteps(num_inference_steps, device=device)
@@ -388,7 +388,10 @@ class ControlVideoPipeline(
                     latent_model_input[:, :, keyframes],
                     t,
                     encoder_hidden_states=keyframe_wembeds,
-                    controlnet_cond=controlnet_frames[:, :, keyframes],
+                    controlnet_cond=[
+                        cnet_frames[:, :, keyframes]
+                        for cnet_frames in controlnet_frames
+                    ],
                     conditioning_scale=controlnet_scales,
                     return_dict=False,
                 )
@@ -434,7 +437,8 @@ class ControlVideoPipeline(
                 ] = key_step_dict.pred_original_sample
 
                 # Interval frames
-                for clip_i, attn_frames, clip_frames in enumerate(clips):
+                for clip_i, (attn_frames, clip_frames) in enumerate(clips):
+                    torch.cuda.empty_cache()
                     inf_frames = attn_frames + clip_frames
                     # Inference on ControlNet
                     (
@@ -444,7 +448,10 @@ class ControlVideoPipeline(
                         latent_model_input[:, :, inf_frames],
                         t,
                         encoder_hidden_states=clip_wembeds[clip_i],
-                        controlnet_cond=controlnet_frames[:, :, inf_frames],
+                        controlnet_cond=[
+                            cnet_frames[:, :, inf_frames]
+                            for cnet_frames in controlnet_frames
+                        ],
                         conditioning_scale=controlnet_scales,
                         return_dict=False,
                     )
@@ -497,6 +504,7 @@ class ControlVideoPipeline(
 
                 # Smooth videos
                 if (num_inference_steps - i) in smooth_steps:
+                    torch.cuda.empty_cache()
                     pred_video = self._decode_latents(
                         pred_original_sample, return_tensor=True
                     )  # b c f h w
