@@ -98,7 +98,7 @@ if __name__ == "__main__":
         conf["video"]["num_inference_steps"],
         conf["video"]["guidance_scale"],
         conf["video"]["smooth_steps"],
-    ).video
+    )
 
     # Save
     for i, frame in enumerate(video):

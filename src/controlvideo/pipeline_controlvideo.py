@@ -309,15 +309,15 @@ class ControlVideoPipeline(
         encoder_dtype = self.text_encoder.dtype
         keyframe_wembeds = torch.cat(
             [
-                keyframe_wembeds[0].to(device, encoder_dtype),
                 keyframe_wembeds[1].to(device, encoder_dtype),
+                keyframe_wembeds[0].to(device, encoder_dtype),
             ]
         )
         clip_wembeds = [
             torch.cat(
                 [
-                    wembeds[0].to(device, encoder_dtype),
                     wembeds[1].to(device, encoder_dtype),
+                    wembeds[0].to(device, encoder_dtype),
                 ]
             )
             for wembeds in clip_wembeds

@@ -1,7 +1,7 @@
 {
     "paths": {
-        "in_path": "../data/dataset/nerf/original/",
-        "out_path": "../data/dataset/nerf/upscaled/"
+        "in_path": "../data/dataset/nvdiffrec/original/",
+        "out_path": "../data/dataset/nvdiffrec/upscaled/"
     },
     "upscale": {
         "outscale": 4.0,

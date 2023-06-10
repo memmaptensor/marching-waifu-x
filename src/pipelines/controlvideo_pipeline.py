@@ -104,6 +104,16 @@ class controlvideo_pipeline:
             scheduler=self.scheduler,
         )
 
+        # Load textual inversions
+        for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
+            pl = pathlib.Path(filepath)
+            if pl.suffix in [".safetensors", ".ckpt", ".pt"]:
+                pipe.load_textual_inversion(
+                    filepath,
+                    token=pl.stem,
+                    use_safetensors=(pl.suffix == ".safetensors"),
+                )
+        
         # Load text encoder
         pipe.text_encoder.to("cuda")
         compel = Compel(
@@ -132,21 +142,11 @@ class controlvideo_pipeline:
         torch.cuda.empty_cache()
 
         # Load pipeline optimizations
-        # pipe.enable_vae_slicing()
+        pipe.enable_vae_slicing()
         pipe.enable_xformers_memory_efficient_attention()
         # pipe.to("cuda")
         # pipe.enable_model_cpu_offload()
         pipe.enable_sequential_cpu_offload()
-
-        # Load textual inversions
-        for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
-            pl = pathlib.Path(filepath)
-            if pl.suffix in [".safetensors", ".ckpt", ".pt"]:
-                pipe.load_textual_inversion(
-                    filepath,
-                    token=pl.stem,
-                    use_safetensors=(pl.suffix == ".safetensors"),
-                )
 
         video = pipe.generate_long_video(
             keyframes,
