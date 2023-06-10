@@ -50,6 +50,7 @@ class MultiControlNetModel3D(ModelMixin):
         for i, (image, scale, controlnet) in enumerate(
             zip(controlnet_cond, conditioning_scale, self.nets)
         ):
+            torch.cuda.empty_cache()
             down_samples, mid_sample = controlnet(
                 sample,
                 timestep,
