@@ -5,10 +5,10 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import numpy as np
 import PIL.Image
 import torch
-from diffusers import AutoencoderKL, DiffusionPipeline, ModelMixin, logging
+from diffusers import AutoencoderKL, ModelMixin, logging
 from diffusers.loaders import LoraLoaderMixin, TextualInversionLoaderMixin
 from diffusers.models import AutoencoderKL
-from diffusers.pipeline_utils import DiffusionPipeline
+from diffusers.pipelines.pipeline_utils import DiffusionPipeline
 from diffusers.schedulers import KarrasDiffusionSchedulers
 from diffusers.utils import PIL_INTERPOLATION, BaseOutput, logging, randn_tensor
 from einops import rearrange
@@ -193,7 +193,9 @@ class ControlVideoPipeline(
         device,
         dtype,
     ):
+        image = [image]
         images = []
+
         for image_ in image:
             image_ = image_.convert("RGB")
             image_ = image_.resize(
@@ -212,6 +214,7 @@ class ControlVideoPipeline(
         image = image.repeat_interleave(1, dim=0)
         image = image.to(device=device, dtype=dtype)
         image = torch.cat([image] * 2)
+
         return image
 
     def _prepare_latents(
@@ -305,15 +308,15 @@ class ControlVideoPipeline(
         encoder_dtype = self.text_encoder.dtype
         keyframe_wembeds = torch.cat(
             [
-                keyframe_wembeds[0].to(encoder_dtype, device=device),
-                keyframe_wembeds[1].to(encoder_dtype, device=device),
+                keyframe_wembeds[0].to(device, encoder_dtype),
+                keyframe_wembeds[1].to(device, encoder_dtype),
             ]
         )
         clip_wembeds = [
             torch.cat(
                 [
-                    wembeds[0].to(encoder_dtype, device=device),
-                    wembeds[1].to(encoder_dtype, device=device),
+                    wembeds[0].to(device, encoder_dtype),
+                    wembeds[1].to(device, encoder_dtype),
                 ]
             )
             for wembeds in clip_wembeds

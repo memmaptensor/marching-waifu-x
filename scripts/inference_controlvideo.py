@@ -64,7 +64,7 @@ if __name__ == "__main__":
     # Prepare generators
     seed = conf["video"]["seed"]
     same_frame_noise = conf["video"]["same_frame_noise"]
-    assert (seed is not None) and (not same_frame_noise)
+    assert not ((not same_frame_noise) and (seed is not None))
     if same_frame_noise:
         generator = torch.Generator("cuda")
         if seed is None:
@@ -74,11 +74,11 @@ if __name__ == "__main__":
         print(f"Using seed: {seed}")
     else:
         generators = []
-        for _ in range(conf["video"]["length"]):
+        for i in range(conf["video"]["length"]):
             generator = torch.Generator("cuda")
             seed = generator.seed()
             generators.append(generator)
-            print(f"Using seed: {seed}")
+            print(f"Using seed: {i}, {seed}")
         generator = generators
 
     # Inference
