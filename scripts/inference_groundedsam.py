@@ -33,9 +33,15 @@ if __name__ == "__main__":
     images = []
     for i in range(conf["groundedsam"]["length"]):
         filepath = os.path.join(conf["paths"]["in_path"], f"{(i+1):04}.png")
-        image = image_wrapper(PIL.Image.open(filepath), "pil")
-        image = image.scale(conf["groundedsam"]["scale"]).to_pil()
+        image = PIL.Image.open(filepath)
         images.append(image)
+
+    # Scale images
+    scaled_images = []
+    for i in range(conf["groundedsam"]["length"]):
+        scaled_image = image_wrapper(images[i], "pil")
+        scaled_image = scaled_image.scale(conf["groundedsam"]["scale"]).to_pil()
+        scaled_images.append(scaled_image)
 
     # Load & Run GroundedSAM
     groundedsam = groundedsam_pipeline(
@@ -43,19 +49,26 @@ if __name__ == "__main__":
     )
     for clip in conf["groundedsam"]["clips"]:
         for frame in clip["clip_frames"]:
+            # Run GroundedSAM
             mask = groundedsam(
-                images[frame],
+                scaled_images[frame],
                 clip["det_prompt"],
                 clip["box_threshold"],
                 clip["text_threshold"],
                 clip["merge_masks"],
             )
-            mask = image_wrapper(mask, "pil")
+            mask = image_wrapper(mask.convert("L"), "pil")
             mask = mask.scale(1.0 / conf["groundedsam"]["scale"]).to_pil()
-            mask.save(
+
+            # Mask alpha
+            masked = images[frame]
+            masked.putalpha(mask)
+
+            # Save results
+            masked.save(
                 os.path.join(
                     conf["paths"]["out_path"],
-                    f"{conf['paths']['file_prefix']}{(frame+1):04}.png",
+                    f"{conf['paths']}{(frame+1):04}.png",
                 )
             )
 
