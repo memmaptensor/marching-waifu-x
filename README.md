@@ -47,6 +47,6 @@ Complete 3D character + animation generation based on ControlVideo, GroundingDIN
 - [ ] Add nvdiffrec
 - [ ] T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
-- [ ] Deployment on Replicate/Gradio
 - [ ] Evaluation against stable-dreamfusion with DeepDanbooru R-Precision
+- [ ] Deployment on Replicate/Gradio
 - [ ] Medium article
