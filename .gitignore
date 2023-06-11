@@ -1,4 +1,3 @@
 data/checkpoints/*
-!data/checkpoints/flownet.pkl
 data/dataset/nvdiffrec/*
 !data/dataset/nvdiffrec/transforms.json

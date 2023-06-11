@@ -16,7 +16,6 @@ from torch import nn
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D, ControlNetOutput
-from src.controlvideo.RIFE.IFNet_HDv3 import IFNet
 from src.controlvideo.unet import UNet3DConditionModel
 
 logger = logging.get_logger(__name__)
@@ -33,6 +32,37 @@ class MultiControlNetModel3D(ModelMixin):
     ):
         super().__init__()
         self.nets = nn.ModuleList(controlnets)
+
+    def enable_sequential_cpu_offload(self, gpu_id=0):
+        from accelerate import cpu_offload
+
+        device = torch.device(f"cuda:{gpu_id}")
+        for cpu_offloaded_model in self.nets:
+            cpu_offload(cpu_offloaded_model, device)
+
+    def enable_model_cpu_offload(self, gpu_id=0):
+        from accelerate import cpu_offload_with_hook
+
+        device = torch.device(f"cuda:{gpu_id}")
+        hook = None
+        for cpu_offloaded_model in self.nets:
+            _, hook = cpu_offload_with_hook(
+                cpu_offloaded_model, device, prev_module_hook=hook
+            )
+        self.final_offload_hook = hook
+
+    @property
+    def _execution_device(self):
+        if not hasattr(self.unet, "_hf_hook"):
+            return self.device
+        for module in self.unet.modules():
+            if (
+                hasattr(module, "_hf_hook")
+                and hasattr(module._hf_hook, "execution_device")
+                and module._hf_hook.execution_device is not None
+            ):
+                return torch.device(module._hf_hook.execution_device)
+        return self.device
 
     def forward(
         self,
@@ -75,6 +105,10 @@ class MultiControlNetModel3D(ModelMixin):
                 ]
                 mid_block_res_sample += mid_sample
 
+        if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
+            self.final_offload_hook.offload()
+        torch.cuda.empty_cache()
+
         return down_block_res_samples, mid_block_res_sample
 
 
@@ -95,7 +129,6 @@ class ControlVideoPipeline(
             MultiControlNetModel3D,
         ],
         scheduler: KarrasDiffusionSchedulers,
-        interpolater: IFNet,
     ):
         super().__init__()
 
@@ -109,7 +142,6 @@ class ControlVideoPipeline(
             unet=unet,
             controlnet=controlnet,
             scheduler=scheduler,
-            interpolater=interpolater,
         )
         self.vae_scale_factor = 2 ** (len(self.vae.config.block_out_channels) - 1)
 
@@ -124,13 +156,10 @@ class ControlVideoPipeline(
 
         device = torch.device(f"cuda:{gpu_id}")
 
-        for cpu_offloaded_model in [
-            self.unet,
-            self.text_encoder,
-            self.vae,
-            self.controlnet,
-        ]:
+        for cpu_offloaded_model in [self.unet, self.text_encoder, self.vae]:
             cpu_offload(cpu_offloaded_model, device)
+
+        self.controlnet.enable_sequential_cpu_offload(gpu_id)
 
     def enable_model_cpu_offload(self, gpu_id=0):
         from accelerate import cpu_offload_with_hook
@@ -143,7 +172,7 @@ class ControlVideoPipeline(
                 cpu_offloaded_model, device, prev_module_hook=hook
             )
 
-        cpu_offload_with_hook(self.controlnet, device)
+        self.controlnet.enable_model_cpu_offload(gpu_id)
         self.final_offload_hook = hook
 
     @property
@@ -290,7 +319,6 @@ class ControlVideoPipeline(
         video_length: int,
         num_inference_steps: int = 50,
         guidance_scale: float = 7.5,
-        smooth_steps: List = [19, 20],
         latents: Optional[torch.FloatTensor] = None,
         eta: float = 0.0,
         cross_attention_kwargs: Optional[Dict[str, Any]] = None,
@@ -360,13 +388,7 @@ class ControlVideoPipeline(
         # 6. Prepare extra step kwargs
         extra_step_kwargs = self._prepare_extra_step_kwargs(generator, eta)
 
-        # 7. Prepare indices
-        if len(smooth_steps) > 0:
-            video_indices = np.arange(video_length)
-            zero_indices = video_indices[0::2]
-            one_indices = video_indices[1::2]
-
-        # 8. Denoising loop
+        # 7. Denoising loop
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
@@ -503,69 +525,6 @@ class ControlVideoPipeline(
                         :, :, clip_frames
                     ] = step_dict.pred_original_sample
 
-                # Smooth videos
-                if (num_inference_steps - i) in smooth_steps:
-                    torch.cuda.empty_cache()
-                    pred_video = self._decode_latents(
-                        pred_original_sample, return_tensor=True
-                    )  # b c f h w
-                    pred_video = rearrange(pred_video, "b c f h w -> b f c h w")
-
-                    for b_i in range(len(pred_video)):
-                        if i % 2 == 0:
-                            for v_i in range(len(zero_indices) - 1):
-                                s_frame = pred_video[b_i][zero_indices[v_i]].unsqueeze(
-                                    0
-                                )
-                                e_frame = pred_video[b_i][
-                                    zero_indices[v_i + 1]
-                                ].unsqueeze(0)
-                                pred_video[b_i][
-                                    one_indices[v_i]
-                                ] = self.interpolater.inference(s_frame, e_frame)[0]
-                        else:
-                            if video_length % 2 == 1:
-                                tmp_one_indices = (
-                                    [0] + one_indices.tolist() + [video_length - 1]
-                                )
-                            else:
-                                tmp_one_indices = [0] + one_indices.tolist()
-                            for v_i in range(len(tmp_one_indices) - 1):
-                                s_frame = pred_video[b_i][
-                                    tmp_one_indices[v_i]
-                                ].unsqueeze(0)
-                                e_frame = pred_video[b_i][
-                                    tmp_one_indices[v_i + 1]
-                                ].unsqueeze(0)
-                                pred_video[b_i][
-                                    zero_indices[v_i]
-                                ] = self.interpolater.inference(s_frame, e_frame)[0]
-
-                    pred_video = rearrange(pred_video, "b f c h w -> (b f) c h w")
-                    pred_video = 2.0 * pred_video - 1.0
-
-                    for v_i in range(len(pred_video)):
-                        pred_original_sample[:, :, v_i] = self.vae.encode(
-                            pred_video[v_i : v_i + 1]
-                        ).latent_dist.sample(generator)
-                        pred_original_sample[
-                            :, :, v_i
-                        ] *= self.vae.config.scaling_factor
-
-                    # Predict xt-1 with smoothed x0
-                    alpha_prod_t_prev = self._get_alpha_prev(t)
-
-                    # Preserve more details
-                    pred_sample_direction = (1 - alpha_prod_t_prev) ** (
-                        0.5
-                    ) * noise_pred
-
-                    # Compute x_t without "random noise" of formula (12) from https://arxiv.org/pdf/2010.02502.pdf
-                    latents = (
-                        alpha_prod_t_prev ** (0.5) * pred_original_sample
-                        + pred_sample_direction
-                    )
-
                 if i == len(timesteps) - 1 or (
                     (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
                 ):
@@ -575,7 +534,7 @@ class ControlVideoPipeline(
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.unet.to("cpu")
             self.controlnet.to("cpu")
-            torch.cuda.empty_cache()
+        torch.cuda.empty_cache()
 
         # Post-processing
         video = self._decode_latents(latents)

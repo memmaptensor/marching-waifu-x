@@ -14,7 +14,6 @@ from transformers import CLIPTextModel, CLIPTokenizer
 from src.controlvideo.controlnet import ControlNetModel3D
 from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
-from src.controlvideo.RIFE.IFNet_HDv3 import IFNet
 from src.controlvideo.unet import UNet3DConditionModel
 
 
@@ -70,9 +69,6 @@ class controlvideo_pipeline:
             for controlnet_path in controlnet_paths
         ]
 
-        # Load IFNet
-        self.interpolator = IFNet(ifnet_path).to(device="cuda", dtype=torch.float16)
-
     @torch.no_grad()
     def __call__(
         self,
@@ -90,7 +86,6 @@ class controlvideo_pipeline:
         generator: Union[torch.Generator, List[torch.Generator]],
         num_inference_steps: int = 20,
         guidance_scale: float = 10.0,
-        smooth_steps: List = [14, 15],
         eta: float = 0.0,
     ):
         # Load pipeline
@@ -100,7 +95,6 @@ class controlvideo_pipeline:
             tokenizer=self.tokenizer,
             unet=self.unet,
             controlnet=self.controlnet,
-            interpolater=self.interpolator,
             scheduler=self.scheduler,
         )
 
@@ -113,7 +107,7 @@ class controlvideo_pipeline:
                     token=pl.stem,
                     use_safetensors=(pl.suffix == ".safetensors"),
                 )
-        
+
         # Load text encoder
         pipe.text_encoder.to("cuda")
         compel = Compel(
@@ -160,7 +154,6 @@ class controlvideo_pipeline:
             video_length,
             num_inference_steps,
             guidance_scale,
-            smooth_steps,
             eta=eta,
         ).video
 
