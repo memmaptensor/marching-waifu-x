@@ -125,11 +125,11 @@ class groundedsam_pipeline:
             text_threshold,
         )
 
-        img_cv2 = image_wrapper(img_pil).to_cv2()
+        img_cv2 = image_wrapper(img_pil, "pil").to_cv2()
         img_cv2 = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
         self.sam.set_image(img_cv2)
 
-        size = img_pil.size()
+        size = img_pil.size
         H, W = size[1], size[0]
         for i in range(boxes_filt.size(0)):
             boxes_filt[i] = boxes_filt[i] * torch.Tensor([W, H, W, H])

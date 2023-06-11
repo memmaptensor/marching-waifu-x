@@ -14,40 +14,49 @@ Complete 3D character + animation generation based on ControlVideo, GroundingDIN
 ## Related resources:
 - [huggingface/diffusers](https://github.com/huggingface/diffusers)
     - [rossiyareich/aniflatmixAnimeFlatColorStyle_v20-fp16](https://huggingface.co/rossiyareich/aniflatmixAnimeFlatColorStyle_v20-fp16)
-    - [rossiyareich/anything-v4.0-vae](https://huggingface.co/rossiyareich/anything-v4.0-vae)
-    - [AsciiP/badhandv4](https://huggingface.co/AsciiP/badhandv4)
+    - [rossiyareich/ClearVAE-diffusers](https://huggingface.co/rossiyareich/ClearVAE-diffusers)
     - [gsdf/EasyNegative](https://huggingface.co/datasets/gsdf/EasyNegative)
-- [rossiyareich/ldm-ckpt-conversion](https://github.com/rossiyareich/ldm-ckpt-conversion.git)
+    - [AsciiP/badhandv4](https://huggingface.co/AsciiP/badhandv4)
+    - [veryBadImageNegative](https://civitai.com/models/11772)
+    - [Pop Up Parade](https://civitai.com/models/78997)
 - [YBYBZhang/ControlVideo](https://github.com/YBYBZhang/ControlVideo)
+- [rossiyareich/ldm-ckpt-conversion](https://github.com/rossiyareich/ldm-ckpt-conversion.git)
 - [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)
 - [IDEA-Research/Grounded-Segment-Anything](https://github.com/IDEA-Research/Grounded-Segment-Anything)
-- [maximeraafat/BlenderNeRF](https://github.com/maximeraafat/BlenderNeRF)
+- [NVlabs/instant-ngp](https://github.com/NVlabs/instant-ngp)
 - [NVlabs/nvdiffrec](https://github.com/NVlabs/nvdiffrec)
 - [Mael-zys/T2M-GPT](https://github.com/Mael-zys/T2M-GPT.git)
 - [softcat477/SMPL-to-FBX](https://github.com/softcat477/SMPL-to-FBX)
-- [veryBadImageNegative](https://civitai.com/models/11772/verybadimagenegative)
-- [OpenPoseBones_v9](https://toyxyz.gumroad.com/l/ciojz)
+- [maximeraafat/BlenderNeRF](https://github.com/maximeraafat/BlenderNeRF)
 - [genshin-style-anime-female-base-mesh-for-blender](https://sketchfab.com/3d-models/genshin-style-anime-female-base-mesh-for-blender-c2d6727e8c9742feb9a4a3bccac6e0e0)
+- [OpenPoseBones_v9](https://toyxyz.gumroad.com/l/ciojz)
 
 ## To-do:
-- [x] ControlVideo + RealESRGAN pipeline
-- [x] 1st-order MultistepDPM++ Karras
+- [x] ControlVideo + RealESRGAN
 - [x] 2nd-order MultistepDPM++ Karras
-- [x] New generation scheme + format
 - [x] MultiControlNet
 - [x] Multiprompt
-- [x] Upscaled preview video
-- [x] Grounding DINO + Segment Anything
-- [x] Render new blender views
-- [x] Update inference parameters
-- [x] Add more embeddings, increase resolution
-- [x] Switch out main checkpoint
-- [x] Fix setup scripts, separate notebooks into local windows, local linux, colab
-- [x] Fix conditioning images
-- [ ] Second stage i2i pipeline for color consistency (w/ canny)
+- [x] Separate notebooks
+- [ ] Increase pipeline resolution back to 768x1024
+- [ ] Fix OpenPose conditioning images
+- [ ] Switch to ClearVAE
+- [ ] LoRA loading (load LoRA before inflating the UNet)
+- [ ] Rewrite first stage (t2i) 
+    - [ ] Use sliding (P,C,F)-Attn instead of CF-Attn + SC-Attn
+- [ ] Rewrite second stage (t2i)
+    - [ ] Apply LoRA
+    - [ ] Use sliding (P,C,F)-Attn instead of CF-Attn + SC-Attn
+    - [ ] SoftEdge HED ControlNet from first stage
+    - [ ] Upscale by 2x
+- [ ] Rewrite third stage (i2i)
+    - [ ] Apply LoRA
+    - [ ] No special attention mechanism (standard diffusers pipeline)
+    - [ ] Upscale by 4x
+- [ ] Fix GroundingDINO + SegmentAnything
+- [ ] Fix InstantNGP prior
 - [ ] Add nvdiffrec
-- [ ] T2M-GPT + SMPL-to-FBX
+- [ ] Add T2M-GPT + SMPL-to-FBX
 - [ ] bpy processing + rigging + retargeting
-- [ ] Evaluation against stable-dreamfusion with DeepDanbooru R-Precision
-- [ ] Deployment on Replicate/Gradio
+- [ ] Evaluation against stable-dreamfusion with DeepDanbooru
+- [ ] Add Gradio UI
 - [ ] Medium article

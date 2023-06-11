@@ -8,6 +8,7 @@ import PIL.Image
 import torch
 
 sys.path.append("..")
+sys.path.append("../ext/Grounded-Segment-Anything/")
 
 from src.pipelines.groundedsam_pipeline import *
 
@@ -68,7 +69,7 @@ if __name__ == "__main__":
             masked.save(
                 os.path.join(
                     conf["paths"]["out_path"],
-                    f"{conf['paths']}{(frame+1):04}.png",
+                    f"{(frame+1):04}.png",
                 )
             )
 
