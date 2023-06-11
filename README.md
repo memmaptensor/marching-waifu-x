@@ -6,7 +6,7 @@
     </a>
 </p>
 
-Complete 3D character + animation generation based on ControlVideo, GroundingDINO, SegmentAnything, nvdiffrec, and T2M-GPT
+Complete 3D character + animation generation based on ControlVideo, GroundingDINO, SegmentAnything, InstantNGP, nvdiffrec, and T2M-GPT
 
 - End-To-End
 <br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rossiyareich/marching-waifu-x/blob/main/ipynb/end2end_colab.ipynb)
