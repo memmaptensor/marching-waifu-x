@@ -49,7 +49,6 @@ if __name__ == "__main__":
         conf["repositories"]["sd"],
         conf["repositories"]["vae"],
         controlnet_repositories,
-        conf["paths"]["ifnet_path"],
         conf["paths"]["cache_dir"],
         num_clips + 1,
     )

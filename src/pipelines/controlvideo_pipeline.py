@@ -20,7 +20,7 @@ from src.controlvideo.unet import UNet3DConditionModel
 class controlvideo_pipeline:
     @torch.no_grad()
     def __init__(
-        self, sd_repo, vae_repo, controlnet_repos, ifnet_path, cache_dir, num_indices
+        self, sd_repo, vae_repo, controlnet_repos, cache_dir, num_indices
     ):
         # Cache model weights
         sd_path = snapshot_download(

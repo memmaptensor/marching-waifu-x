@@ -2,7 +2,6 @@
     "paths": {
         "out_path": "../data/dataset/nvdiffrec/original/",
         "cache_dir": "../data/checkpoints/",
-        "ifnet_path": "../data/checkpoints/flownet.pkl",
         "condition_path": "../data/dataset/conditioning/",
         "textual_inversion_path": "../data/embeddings/"
     },
