@@ -28,7 +28,7 @@ if __name__ == "__main__":
     )
 
     # Encode an image
-    img_emb = model.encode(PIL.Image.open(conf["evaluation"]["image"]))
+    img_emb = model.encode(PIL.Image.open(conf["paths"]["image"]))
 
     # Encode text descriptions
     text_emb = model.encode([f"{args.text}"])
