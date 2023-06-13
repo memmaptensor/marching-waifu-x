@@ -56,11 +56,11 @@ if __name__ == "__main__":
     negative_prompts = [None] * conf["diffusion"]["length"]
     for addition in additions:
         for frame in addition["frames"]:
-            prompts[frame] = conf["diffusion"]["base_prompt"] % tuple(
-                addition["add_prompt"]
+            prompts[frame] = conf["diffusion"]["base_prompt"].format(
+                *addition["add_prompt"]
             )
-            negative_prompts[frame] = conf["diffusion"]["base_neg_prompt"] % tuple(
-                addition["add_neg_prompt"]
+            negative_prompts[frame] = conf["diffusion"]["base_neg_prompt"].format(
+                *addition["add_neg_prompt"]
             )
 
     # Prepare generators
@@ -94,7 +94,7 @@ if __name__ == "__main__":
         conf["diffusion"]["length"],
         generator,
         conf["diffusion"]["num_inference_steps"],
-        conf["diffusion"]["guidance_scale"]
+        conf["diffusion"]["guidance_scale"],
     )
 
     # Save

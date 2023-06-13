@@ -9,10 +9,10 @@
     },
     "repositories": {
         "sd": "rossiyareich/abyssorangemix3-popupparade-fp16",
-        "vae": "rossiyareich/abyssorangemix3-vae"
+        "vae": "rossiyareich/anything-v4.0-vae"
     },
     "diffusion": {
-        "base_prompt": "make her a fully clothed figurine standing upright {0} with fists and a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})+, (1girl, fists, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)",
+        "base_prompt": "make her a fully clothed figurine standing upright {0} with fists and a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})++, (1girl, fists, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)+",
         "base_neg_prompt": "easynegative, badhandv4, verybadimagenegative_v1.3, worst quality, low quality, logo, text, watermark, username",
         "num_inference_steps": 20,
         "guidance_scale": 12.0,
@@ -21,7 +21,7 @@
         "length": 100,
         "controlnets": {
             "scales": [1.0, 1.0],
-            "exp": 0.85,
+            "exp": 0.825,
             "pipe": {
                 "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
                 "albedo": "lllyasviel/control_v11e_sd15_ip2p"

@@ -364,7 +364,7 @@ class ControlVideoPipeline(
                 noise_pred = torch.zeros_like(latents)
                 pred_original_sample = torch.zeros_like(latents)
 
-                for frame_n in range(len(controlnet_frames)):
+                for frame_n in range(video_length):
                     torch.cuda.empty_cache()
 
                     if frame_n == 0:
@@ -404,7 +404,7 @@ class ControlVideoPipeline(
                     mid_block_res_sample = block_res_samples[-1]
 
                     # Inference on UNet
-                    noise_pred = self.unet(
+                    pred_noise_pred = self.unet(
                         latent_model_input[:, :, frames],
                         t,
                         encoder_hidden_states=frame_wembeds[frame_n],
@@ -415,7 +415,7 @@ class ControlVideoPipeline(
                     ).sample
 
                     # Perform CFG
-                    noise_pred_uncond, noise_pred_text = noise_pred[
+                    noise_pred_uncond, noise_pred_text = pred_noise_pred[
                         :, :, focus_rel
                     ].chunk(2)
                     noise_pred[:, :, frame_n] = noise_pred_uncond + guidance_scale * (

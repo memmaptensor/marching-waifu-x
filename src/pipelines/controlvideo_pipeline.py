@@ -84,6 +84,8 @@ class controlvideo_pipeline:
         guidance_scale: float = 10.0,
         eta: float = 0.0,
     ):
+        torch.cuda.empty_cache()
+
         # Load pipeline
         pipe = ControlVideoPipeline(
             vae=self.vae,
@@ -128,8 +130,8 @@ class controlvideo_pipeline:
         # Load pipeline optimizations
         pipe.enable_vae_slicing()
         pipe.enable_xformers_memory_efficient_attention()
-        # pipe.to("cuda")
-        pipe.enable_model_cpu_offload()
+        pipe.to("cuda")
+        # pipe.enable_model_cpu_offload()
         # pipe.enable_sequential_cpu_offload()
 
         video = pipe.generate_long_video(
@@ -143,9 +145,5 @@ class controlvideo_pipeline:
             guidance_scale,
             eta=eta,
         ).video
-
-        del pipe
-        gc.collect()
-        torch.cuda.empty_cache()
 
         return video
