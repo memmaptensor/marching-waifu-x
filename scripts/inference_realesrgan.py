@@ -42,10 +42,10 @@ if __name__ == "__main__":
         conf["upscale"]["gpu_id"],
     )
 
-    for filepath in sorted(glob.glob(os.path.join(conf["paths"]["in_path"], "*.png"))):
+    for filepath in sorted(glob.glob(os.path.join(conf["paths"]["diffusion_output_path"], "*.png"))):
         pl = pathlib.Path(filepath)
         output_image = realesrgan(PIL.Image.open(filepath))
-        output_image.save(os.path.join(conf["paths"]["out_path"], f"{pl.stem}.png"))
+        output_image.save(os.path.join(conf["paths"]["upscaled_path"], f"{pl.stem}.png"))
 
     del realesrgan
     gc.collect()

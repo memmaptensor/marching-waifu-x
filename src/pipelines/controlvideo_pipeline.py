@@ -20,7 +20,7 @@ from src.controlvideo.unet import UNet3DConditionModel
 class controlvideo_pipeline:
     @torch.no_grad()
     def __init__(
-        self, sd_repo, vae_repo, controlnet_repos, cache_dir, num_indices
+        self, sd_repo, vae_repo, controlnet_repos, cache_dir, num_frames
     ):
         # Cache model weights
         sd_path = snapshot_download(
@@ -53,7 +53,7 @@ class controlvideo_pipeline:
             sd_path,
             subfolder="scheduler",
             use_karras_sigmas=True,
-            num_indices=num_indices,
+            num_frames=num_frames,
         )
 
         # Load main UNet
@@ -73,12 +73,8 @@ class controlvideo_pipeline:
     def __call__(
         self,
         textual_inversion_path: str,
-        keyframes: List[int],
-        keyframe_prompt: torch.FloatTensor,
-        keyframe_negative_prompt: torch.FloatTensor,
-        clips: List[Tuple[List[int], List[int]]],
-        clip_prompts: List[torch.FloatTensor],
-        clip_negative_prompts: List[torch.FloatTensor],
+        prompts: List[str],
+        negative_prompts: List[str],
         controlnet_frames: List[List[PIL.Image.Image]],
         controlnet_scales: List[float],
         controlnet_exp: float,
@@ -116,20 +112,14 @@ class controlvideo_pipeline:
             truncate_long_prompts=False,
             device="cuda",
         )
-        keyframe_wembeds = compel.pad_conditioning_tensors_to_same_length(
-            [
-                compel.build_conditioning_tensor(keyframe_prompt),
-                compel.build_conditioning_tensor(keyframe_negative_prompt),
-            ]
-        )
-        clip_wembeds = [
+        frame_wembeds = [
             compel.pad_conditioning_tensors_to_same_length(
                 [
                     compel.build_conditioning_tensor(prompt),
                     compel.build_conditioning_tensor(negative_prompt),
                 ]
             )
-            for prompt, negative_prompt in zip(clip_prompts, clip_negative_prompts)
+            for prompt, negative_prompt in zip(prompts, negative_prompts)
         ]
         del compel
         pipe.text_encoder.to("cpu")
@@ -143,10 +133,7 @@ class controlvideo_pipeline:
         # pipe.enable_sequential_cpu_offload()
 
         video = pipe.generate_long_video(
-            keyframes,
-            keyframe_wembeds,
-            clips,
-            clip_wembeds,
+            frame_wembeds,
             controlnet_frames,
             controlnet_scales,
             controlnet_exp,

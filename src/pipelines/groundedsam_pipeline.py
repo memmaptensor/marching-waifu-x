@@ -1,52 +1,54 @@
-import cv2
 import GroundingDINO.groundingdino.datasets.transforms as T
+import numpy as np
+import PIL.Image
 import torch
 from GroundingDINO.groundingdino.models import build_model
+from GroundingDINO.groundingdino.util import box_ops
+from GroundingDINO.groundingdino.util.inference import predict
 from GroundingDINO.groundingdino.util.slconfig import SLConfig
-from GroundingDINO.groundingdino.util.utils import (
-    clean_state_dict,
-    get_phrases_from_posmap,
-)
+from GroundingDINO.groundingdino.util.utils import clean_state_dict
 from huggingface_hub import hf_hub_download
-from PIL import Image
 from segment_anything import SamPredictor, build_sam
-
-from src.utils.image_wrapper import *
 
 
 class groundedsam_pipeline:
     @torch.no_grad()
-    def __init__(self, cache_dir, device):
-        # Cache model weights
-        grounding_dino_conf_checkpoint = hf_hub_download(
-            "ShilongLiu/GroundingDINO",
-            "GroundingDINO_SwinB.cfg.py",
-            cache_dir=cache_dir,
-            local_dir_use_symlinks=True,
-        )
-        grounding_dino_checkpoint = hf_hub_download(
+    def __init__(self, save_path, device="cuda"):
+        self.device = device
+        self.groundingdino_model = self._load_model_hf(
             "ShilongLiu/GroundingDINO",
             "groundingdino_swinb_cogcoor.pth",
-            cache_dir=cache_dir,
-            local_dir_use_symlinks=True,
+            "GroundingDINO_SwinB.cfg.py",
+            save_path,
         )
         sam_checkpoint = hf_hub_download(
             "camenduru/ovseg",
             "sam_vit_h_4b8939.pth",
-            cache_dir=cache_dir,
+            cache_dir=save_path,
+            local_dir_use_symlinks=True,
+        )
+        self.sam_predictor = SamPredictor(build_sam(sam_checkpoint).to(device))
+
+    def _load_model_hf(self, repo_id, filename, ckpt_config_filename, save_path):
+        cache_config_file = hf_hub_download(
+            repo_id=repo_id,
+            filename=ckpt_config_filename,
+            cache_dir=save_path,
             local_dir_use_symlinks=True,
         )
 
-        # Load models
-        self.device = device
-        self.grounding = self._load_model(
-            grounding_dino_conf_checkpoint, grounding_dino_checkpoint
-        )
-        self.sam = SamPredictor(build_sam(sam_checkpoint).to(device))
+        args = SLConfig.fromfile(cache_config_file)
+        args.device = self.device
+        model = build_model(args)
 
-    def _load_image(self, image):
-        img_pil = image.convert("RGB")
+        cache_file = hf_hub_download(repo_id=repo_id, filename=filename)
+        checkpoint = torch.load(cache_file, map_location=self.device)
+        log = model.load_state_dict(clean_state_dict(checkpoint["model"]), strict=False)
+        print("Model loaded from {} \n => {}".format(cache_file, log))
+        _ = model.eval()
+        return model
 
+    def _load_image(image_pil):
         transform = T.Compose(
             [
                 T.RandomResize([800], max_size=1333),
@@ -54,106 +56,47 @@ class groundedsam_pipeline:
                 T.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225]),
             ]
         )
-        img, _ = transform(img_pil, None)  # 3, h, w
+        image_source = image_pil.convert("RGB")
+        image = np.asarray(image_source)
+        image_transformed, _ = transform(image_source, None)
+        return image, image_transformed
 
-        return img_pil, img
-
-    def _load_model(self, model_config_path, model_checkpoint_path):
-        args = SLConfig.fromfile(model_config_path)
-        args.device = self.device
-        model = build_model(args)
-        checkpoint = torch.load(model_checkpoint_path, map_location="cpu")
-        load_res = model.load_state_dict(
-            clean_state_dict(checkpoint["model"]), strict=False
-        )
-        print(load_res)
-        _ = model.eval()
-
-        return model
-
-    def _get_grounding_output(
-        self, image, caption, box_threshold, text_threshold, with_logits=True
-    ):
-        caption = caption.lower()
-        caption = caption.strip()
-        if not caption.endswith("."):
-            caption = caption + "."
-        grounding = self.grounding.to(self.device)
-        image = image.to(self.device)
-        with torch.no_grad():
-            outputs = grounding(image[None], captions=[caption])
-        logits = outputs["pred_logits"].cpu().sigmoid()[0]  # (nq, 256)
-        boxes = outputs["pred_boxes"].cpu()[0]  # (nq, 4)
-        logits.shape[0]
-
-        # Filter output
-        logits_filt = logits.clone()
-        boxes_filt = boxes.clone()
-        filt_mask = logits_filt.max(dim=1)[0] > box_threshold
-        logits_filt = logits_filt[filt_mask]  # num_filt, 256
-        boxes_filt = boxes_filt[filt_mask]  # num_filt, 4
-        logits_filt.shape[0]
-
-        # Get phrase
-        tokenlizer = grounding.tokenizer
-        tokenized = tokenlizer(caption)
-
-        # Build pred
-        pred_phrases = []
-        for logit, box in zip(logits_filt, boxes_filt):
-            pred_phrase = get_phrases_from_posmap(
-                logit > text_threshold, tokenized, tokenlizer
-            )
-            if with_logits:
-                pred_phrases.append(pred_phrase + f"({str(logit.max().item())[:4]})")
-            else:
-                pred_phrases.append(pred_phrase)
-
-        return boxes_filt, pred_phrases
-
-    @torch.no_grad()
-    def __call__(
-        self, image, det_prompt, box_threshold, text_threshold, merge_masks=True
-    ):
-        torch.cuda.empty_cache()
-
-        img_pil, img = self._load_image(image)
-        boxes_filt, pred_phrases = self._get_grounding_output(
-            img,
-            det_prompt,
-            box_threshold,
-            text_threshold,
+    def _detect(self, image, text_prompt, box_threshold=0.3, text_threshold=0.25):
+        boxes, logits, phrases = predict(
+            model=self.groundingdino_model,
+            image=image,
+            caption=text_prompt,
+            box_threshold=box_threshold,
+            text_threshold=text_threshold,
         )
 
-        img_cv2 = image_wrapper(img_pil, "pil").to_cv2()
-        img_cv2 = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2RGB)
-        self.sam.set_image(img_cv2)
+        return boxes
 
-        size = img_pil.size
-        H, W = size[1], size[0]
-        for i in range(boxes_filt.size(0)):
-            boxes_filt[i] = boxes_filt[i] * torch.Tensor([W, H, W, H])
-            boxes_filt[i][:2] -= boxes_filt[i][2:] / 2
-            boxes_filt[i][2:] += boxes_filt[i][:2]
+    def _segment(self, image, boxes):
+        self.sam_predictor.set_image(image)
+        H, W, _ = image.shape
+        boxes_xyxy = box_ops.box_cxcywh_to_xyxy(boxes) * torch.Tensor([W, H, W, H])
 
-        boxes_filt = boxes_filt.cpu()
-        transformed_boxes = self.sam.transform.apply_boxes_torch(
-            boxes_filt, img.shape[:2]
-        ).to(self.device)
-
-        masks, _, _ = self.sam.predict_torch(
+        transformed_boxes = self.sam_predictor.transform.apply_boxes_torch(
+            boxes_xyxy.to(self.device), image.shape[:2]
+        )
+        masks, _, _ = self.sam_predictor.predict_torch(
             point_coords=None,
             point_labels=None,
-            boxes=transformed_boxes.to(self.device),
+            boxes=transformed_boxes,
             multimask_output=False,
         )
+        return masks.cpu()
 
-        if merge_masks:
-            masks = torch.sum(masks, dim=0).unsqueeze(0)
-            masks = torch.where(masks > 0, True, False)
+    @torch.no_grad()
+    def __call__(self, image_pil, prompt, box_threshold, text_threshold):
+        torch.cuda.empty_cache()
 
-        # Simply choose the first mask, which will be refined in the future release
-        mask = masks[0][0].cpu().numpy()
-        mask_pil = Image.fromarray(mask)
+        image_source, image = self._load_image(image_pil)
+        detected_boxes = self._detect(image, prompt, box_threshold, text_threshold)
+        segmented_frame_masks = self._segment(image_source, detected_boxes)
+
+        mask = segmented_frame_masks[0][0].cpu().numpy()
+        mask_pil = PIL.Image.fromarray(mask)
 
         return mask_pil

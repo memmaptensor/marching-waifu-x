@@ -11,6 +11,7 @@ sys.path.append("..")
 sys.path.append("../ext/Grounded-Segment-Anything/")
 
 from src.pipelines.groundedsam_pipeline import *
+from src.utils.image_wrapper import *
 
 
 def get_args():
@@ -33,7 +34,7 @@ if __name__ == "__main__":
     # Load images
     images = []
     for i in range(conf["groundedsam"]["length"]):
-        filepath = os.path.join(conf["paths"]["in_path"], f"{(i+1):04}.png")
+        filepath = os.path.join(conf["paths"]["upscaled_path"], f"{(i+1):04}.png")
         image = PIL.Image.open(filepath)
         images.append(image)
 
@@ -45,18 +46,15 @@ if __name__ == "__main__":
         scaled_images.append(scaled_image)
 
     # Load & Run GroundedSAM
-    groundedsam = groundedsam_pipeline(
-        conf["paths"]["cache_dir"], conf["groundedsam"]["device"]
-    )
-    for clip in conf["groundedsam"]["clips"]:
-        for frame in clip["clip_frames"]:
+    groundedsam = groundedsam_pipeline(conf["paths"]["checkpoints_path"])
+    for detection in conf["groundedsam"]["detection"]:
+        for frame in detection["frames"]:
             # Run GroundedSAM
             mask = groundedsam(
                 scaled_images[frame],
-                clip["det_prompt"],
-                clip["box_threshold"],
-                clip["text_threshold"],
-                clip["merge_masks"],
+                frame["prompt"],
+                frame["box_threshold"],
+                frame["text_threshold"],
             )
             mask = image_wrapper(mask.convert("L"), "pil")
             mask = mask.scale(1.0 / conf["groundedsam"]["scale"]).to_pil()
@@ -68,7 +66,7 @@ if __name__ == "__main__":
             # Save results
             masked.save(
                 os.path.join(
-                    conf["paths"]["out_path"],
+                    conf["paths"]["masked_path"],
                     f"{(frame+1):04}.png",
                 )
             )

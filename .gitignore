@@ -1,3 +1,5 @@
 data/checkpoints/*
-data/dataset/nvdiffrec/*
-!data/dataset/nvdiffrec/transforms.json
+data/dataset/diffusion/*
+data/dataset/diffusion_upscaled/*
+data/dataset/ngp/*
+!data/dataset/ngp/transforms*.json

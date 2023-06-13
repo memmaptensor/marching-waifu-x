@@ -33,37 +33,6 @@ class MultiControlNetModel3D(ModelMixin):
         super().__init__()
         self.nets = nn.ModuleList(controlnets)
 
-    def enable_sequential_cpu_offload(self, gpu_id=0):
-        from accelerate import cpu_offload
-
-        device = torch.device(f"cuda:{gpu_id}")
-        for cpu_offloaded_model in self.nets:
-            cpu_offload(cpu_offloaded_model, device)
-
-    def enable_model_cpu_offload(self, gpu_id=0):
-        from accelerate import cpu_offload_with_hook
-
-        device = torch.device(f"cuda:{gpu_id}")
-        hook = None
-        for cpu_offloaded_model in self.nets:
-            _, hook = cpu_offload_with_hook(
-                cpu_offloaded_model, device, prev_module_hook=hook
-            )
-        self.final_offload_hook = hook
-
-    @property
-    def _execution_device(self):
-        if not hasattr(self.unet, "_hf_hook"):
-            return self.device
-        for module in self.unet.modules():
-            if (
-                hasattr(module, "_hf_hook")
-                and hasattr(module._hf_hook, "execution_device")
-                and module._hf_hook.execution_device is not None
-            ):
-                return torch.device(module._hf_hook.execution_device)
-        return self.device
-
     def forward(
         self,
         sample: torch.FloatTensor,
@@ -81,6 +50,7 @@ class MultiControlNetModel3D(ModelMixin):
             zip(controlnet_cond, conditioning_scale, self.nets)
         ):
             torch.cuda.empty_cache()
+
             down_samples, mid_sample = controlnet(
                 sample,
                 timestep,
@@ -94,6 +64,7 @@ class MultiControlNetModel3D(ModelMixin):
                 return_dict,
             )
 
+            # Merge samples
             if i == 0:
                 down_block_res_samples, mid_block_res_sample = down_samples, mid_sample
             else:
@@ -104,10 +75,6 @@ class MultiControlNetModel3D(ModelMixin):
                     )
                 ]
                 mid_block_res_sample += mid_sample
-
-        if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
-            self.final_offload_hook.offload()
-        torch.cuda.empty_cache()
 
         return down_block_res_samples, mid_block_res_sample
 
@@ -156,7 +123,12 @@ class ControlVideoPipeline(
 
         device = torch.device(f"cuda:{gpu_id}")
 
-        for cpu_offloaded_model in [self.unet, self.text_encoder, self.vae]:
+        for cpu_offloaded_model in [
+            self.unet,
+            self.text_encoder,
+            self.vae,
+            self.controlnet,
+        ]:
             cpu_offload(cpu_offloaded_model, device)
 
         self.controlnet.enable_sequential_cpu_offload(gpu_id)
@@ -172,7 +144,7 @@ class ControlVideoPipeline(
                 cpu_offloaded_model, device, prev_module_hook=hook
             )
 
-        self.controlnet.enable_model_cpu_offload(gpu_id)
+        cpu_offload_with_hook(self.controlnet, device)
         self.final_offload_hook = hook
 
     @property
@@ -308,10 +280,7 @@ class ControlVideoPipeline(
     @torch.no_grad()
     def generate_long_video(
         self,
-        keyframes: List[int],
-        keyframe_wembeds: torch.FloatTensor,
-        clips: List[Tuple[List[int], List[int]]],
-        clip_wembeds: List[torch.FloatTensor],
+        frame_wembeds: List[torch.FloatTensor],
         controlnet_frames: List[List[PIL.Image.Image]],
         controlnet_scales: List[float],
         controlnet_exp: float,
@@ -334,21 +303,14 @@ class ControlVideoPipeline(
         controlnet_block_scales = [controlnet_exp ** (12 - i) for i in range(13)]
 
         # 2. Encode input prompts
-        encoder_dtype = self.text_encoder.dtype
-        keyframe_wembeds = torch.cat(
-            [
-                keyframe_wembeds[1].to(device, encoder_dtype),
-                keyframe_wembeds[0].to(device, encoder_dtype),
-            ]
-        )
-        clip_wembeds = [
+        frame_wembeds = [
             torch.cat(
                 [
-                    wembeds[1].to(device, encoder_dtype),
-                    wembeds[0].to(device, encoder_dtype),
+                    wembeds[1].to(device, self.text_encoder.dtype),
+                    wembeds[0].to(device, self.text_encoder.dtype),
                 ]
             )
-            for wembeds in clip_wembeds
+            for wembeds in frame_wembeds
         ]
 
         # 3. Prepare image
@@ -378,7 +340,7 @@ class ControlVideoPipeline(
             video_length,
             height,
             width,
-            encoder_dtype,
+            self.text_encoder.dtype,
             device,
             generator,
             latents,
@@ -402,128 +364,74 @@ class ControlVideoPipeline(
                 noise_pred = torch.zeros_like(latents)
                 pred_original_sample = torch.zeros_like(latents)
 
-                # Keyframes
-                # Inference on ControlNet
-                (
-                    key_down_block_res_samples,
-                    key_mid_block_res_sample,
-                ) = self.controlnet(
-                    latent_model_input[:, :, keyframes],
-                    t,
-                    encoder_hidden_states=keyframe_wembeds,
-                    controlnet_cond=[
-                        cnet_frames[:, :, keyframes]
-                        for cnet_frames in controlnet_frames
-                    ],
-                    conditioning_scale=controlnet_scales,
-                    return_dict=False,
-                )
-                key_block_res_samples = [
-                    *key_down_block_res_samples,
-                    key_mid_block_res_sample,
-                ]
-                key_block_res_samples = [
-                    b * s
-                    for b, s in zip(key_block_res_samples, controlnet_block_scales)
-                ]
-                key_down_block_res_samples = key_block_res_samples[:-1]
-                key_mid_block_res_sample = key_block_res_samples[-1]
-
-                # Inference on UNet
-                key_noise_pred = self.unet(
-                    latent_model_input[:, :, keyframes],
-                    t,
-                    encoder_hidden_states=keyframe_wembeds,
-                    cross_attention_kwargs=cross_attention_kwargs,
-                    down_block_additional_residuals=key_down_block_res_samples,
-                    mid_block_additional_residual=key_mid_block_res_sample,
-                    inter_frame=False,
-                ).sample
-
-                # Perform CFG
-                noise_pred_uncond, noise_pred_text = key_noise_pred.chunk(2)
-                noise_pred[:, :, keyframes] = noise_pred_uncond + guidance_scale * (
-                    noise_pred_text - noise_pred_uncond
-                )
-
-                # Compute the previous noisy sample x_t -> x_t-1
-                key_step_dict = self.scheduler.step(
-                    noise_pred[:, :, keyframes],
-                    t,
-                    latents[:, :, keyframes],
-                    0,
-                    **extra_step_kwargs,
-                )
-                latents[:, :, keyframes] = key_step_dict.prev_sample
-                pred_original_sample[
-                    :, :, keyframes
-                ] = key_step_dict.pred_original_sample
-
-                # Interval frames
-                for clip_i, (attn_frames, clip_frames) in enumerate(clips):
+                for frame_n in range(len(controlnet_frames)):
                     torch.cuda.empty_cache()
-                    inf_frames = attn_frames + clip_frames
+
+                    if frame_n == 0:
+                        frames = [0]
+                        focus_rel = 0
+                    elif frame_n == 1:
+                        frames = [0, 1]
+                        focus_rel = 1
+                    else:
+                        frames = [frame_n - 1, frame_n, 0]
+                        focus_rel = 1
+
                     # Inference on ControlNet
                     (
-                        inter_down_block_res_samples,
-                        inter_mid_block_res_sample,
+                        down_block_res_samples,
+                        mid_block_res_sample,
                     ) = self.controlnet(
-                        latent_model_input[:, :, inf_frames],
+                        latent_model_input[:, :, frames],
                         t,
-                        encoder_hidden_states=clip_wembeds[clip_i],
+                        encoder_hidden_states=frame_wembeds[frame_n],
                         controlnet_cond=[
-                            cnet_frames[:, :, inf_frames]
+                            cnet_frames[:, :, frames]
                             for cnet_frames in controlnet_frames
                         ],
                         conditioning_scale=controlnet_scales,
                         return_dict=False,
                     )
-                    inter_block_res_samples = [
-                        *inter_down_block_res_samples,
-                        inter_mid_block_res_sample,
+                    block_res_samples = [
+                        *down_block_res_samples,
+                        mid_block_res_sample,
                     ]
-                    inter_block_res_samples = [
+                    block_res_samples = [
                         b * s
-                        for b, s in zip(
-                            inter_block_res_samples, controlnet_block_scales
-                        )
+                        for b, s in zip(block_res_samples, controlnet_block_scales)
                     ]
-                    inter_down_block_res_samples = inter_block_res_samples[:-1]
-                    inter_mid_block_res_sample = inter_block_res_samples[-1]
+                    down_block_res_samples = block_res_samples[:-1]
+                    mid_block_res_sample = block_res_samples[-1]
 
                     # Inference on UNet
-                    inter_noise_pred = self.unet(
-                        latent_model_input[:, :, inf_frames],
+                    noise_pred = self.unet(
+                        latent_model_input[:, :, frames],
                         t,
-                        encoder_hidden_states=clip_wembeds[clip_i],
+                        encoder_hidden_states=frame_wembeds[frame_n],
                         cross_attention_kwargs=cross_attention_kwargs,
-                        down_block_additional_residuals=inter_down_block_res_samples,
-                        mid_block_additional_residual=inter_mid_block_res_sample,
-                        inter_frame=True,
+                        down_block_additional_residuals=down_block_res_samples,
+                        mid_block_additional_residual=mid_block_res_sample,
+                        inter_frame=False,
                     ).sample
 
                     # Perform CFG
-                    noise_pred_uncond, noise_pred_text = inter_noise_pred[
-                        :, :, len(attn_frames) :
+                    noise_pred_uncond, noise_pred_text = noise_pred[
+                        :, :, focus_rel
                     ].chunk(2)
-                    noise_pred[
-                        :, :, clip_frames
-                    ] = noise_pred_uncond + guidance_scale * (
+                    noise_pred[:, :, frame_n] = noise_pred_uncond + guidance_scale * (
                         noise_pred_text - noise_pred_uncond
                     )
 
                     # Compute the previous noisy sample x_t -> x_t-1
                     step_dict = self.scheduler.step(
-                        noise_pred[:, :, clip_frames],
+                        noise_pred[:, :, frame_n],
                         t,
-                        latents[:, :, clip_frames],
-                        clip_i + 1,
+                        latents[:, :, frame_n],
+                        frame_n,
                         **extra_step_kwargs,
                     )
-                    latents[:, :, clip_frames] = step_dict.prev_sample
-                    pred_original_sample[
-                        :, :, clip_frames
-                    ] = step_dict.pred_original_sample
+                    latents[:, :, frame_n] = step_dict.prev_sample
+                    pred_original_sample[:, :, frame_n] = step_dict.pred_original_sample
 
                 if i == len(timesteps) - 1 or (
                     (i + 1) > num_warmup_steps and (i + 1) % self.scheduler.order == 0
@@ -534,7 +442,7 @@ class ControlVideoPipeline(
         if hasattr(self, "final_offload_hook") and self.final_offload_hook is not None:
             self.unet.to("cpu")
             self.controlnet.to("cpu")
-        torch.cuda.empty_cache()
+            torch.cuda.empty_cache()
 
         # Post-processing
         video = self._decode_latents(latents)

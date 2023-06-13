@@ -29,40 +29,43 @@ if __name__ == "__main__":
         conf = json.load(f)
 
     # Load ControlNet conditioning images
-    controlnet_prefixes = conf["controlnet"]["pipe"].keys()
-    controlnet_repositories = conf["controlnet"]["pipe"].values()
+    controlnet_prefixes = conf["diffusion"]["controlnets"]["pipe"].keys()
+    controlnet_repositories = conf["diffusion"]["controlnets"]["pipe"].values()
     controlnet_conditions = []
-    for i in range(conf["video"]["length"]):
+    for i in range(conf["diffusion"]["length"]):
         controlnet_condition = []
         for controlnet_prefix in controlnet_prefixes:
             filepath = os.path.join(
-                conf["paths"]["condition_path"], f"{controlnet_prefix}{(i+1):04}.png"
+                conf["paths"]["conditions_path"], f"{controlnet_prefix}{(i+1):04}.png"
             )
             controlnet_condition.append(PIL.Image.open(filepath))
         controlnet_conditions.append(controlnet_condition)
-
-    # Load video attributes
-    num_clips = len(conf["video"]["clips"])
 
     # Load pipeline
     pipe = controlvideo_pipeline(
         conf["repositories"]["sd"],
         conf["repositories"]["vae"],
         controlnet_repositories,
-        conf["paths"]["cache_dir"],
-        num_clips + 1,
+        conf["paths"]["checkpoints_path"],
+        conf["diffusion"]["length"],
     )
 
     # Load video attributes
-    clips = [
-        (clip["attn_frames"], clip["clip_frames"]) for clip in conf["video"]["clips"]
-    ]
-    clip_prompts = [clip["prompt"] for clip in conf["video"]["clips"]]
-    clip_negative_prompts = [clip["negative_prompt"] for clip in conf["video"]["clips"]]
+    additions = conf["diffusion"]["additions"]
+    prompts = [None] * conf["diffusion"]["length"]
+    negative_prompts = [None] * conf["diffusion"]["length"]
+    for addition in additions:
+        for frame in addition["frames"]:
+            prompts[frame] = conf["diffusion"]["base_prompt"] % tuple(
+                addition["add_prompt"]
+            )
+            negative_prompts[frame] = conf["diffusion"]["base_neg_prompt"] % tuple(
+                addition["add_neg_prompt"]
+            )
 
     # Prepare generators
-    seed = conf["video"]["seed"]
-    same_frame_noise = conf["video"]["same_frame_noise"]
+    seed = conf["diffusion"]["seed"]
+    same_frame_noise = conf["diffusion"]["same_frame_noise"]
     assert not ((not same_frame_noise) and (seed is not None))
     if same_frame_noise:
         generator = torch.Generator("cuda")
@@ -73,7 +76,7 @@ if __name__ == "__main__":
         print(f"Using seed: {seed}")
     else:
         generators = []
-        for i in range(conf["video"]["length"]):
+        for i in range(conf["diffusion"]["length"]):
             generator = torch.Generator("cuda")
             seed = generator.seed()
             generators.append(generator)
@@ -82,25 +85,23 @@ if __name__ == "__main__":
 
     # Inference
     video = pipe(
-        conf["paths"]["textual_inversion_path"],
-        conf["video"]["keyframes"]["frames"],
-        conf["video"]["keyframes"]["prompt"],
-        conf["video"]["keyframes"]["negative_prompt"],
-        clips,
-        clip_prompts,
-        clip_negative_prompts,
+        conf["paths"]["embeddings_path"],
+        prompts,
+        negative_prompts,
         controlnet_conditions,
-        conf["controlnet"]["scales"],
-        conf["controlnet"]["exp"],
-        conf["video"]["length"],
+        conf["diffusion"]["controlnets"]["scales"],
+        conf["diffusion"]["controlnets"]["exp"],
+        conf["diffusion"]["length"],
         generator,
-        conf["video"]["num_inference_steps"],
-        conf["video"]["guidance_scale"],
+        conf["diffusion"]["num_inference_steps"],
+        conf["diffusion"]["guidance_scale"]
     )
 
     # Save
     for i, frame in enumerate(video):
-        frame.save(os.path.join(conf["paths"]["out_path"], f"{(i+1):04}.png"))
+        frame.save(
+            os.path.join(conf["paths"]["diffusion_output_path"], f"{(i+1):04}.png")
+        )
 
     del pipe
     gc.collect()

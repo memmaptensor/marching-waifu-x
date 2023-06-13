@@ -1,0 +1,159 @@
+{
+    "paths": {
+        "diffusion_output_path": "../data/dataset/diffusion",
+        "conditions_path": "../data/dataset/conditions",
+        "upscaled_path": "../data/dataset/diffusion_upscaled",
+        "masked_path": "../data/dataset/ngp/train",
+        "checkpoints_path": "../data/checkpoints/",
+        "embeddings_path": "../data/embeddings/"
+    },
+    "repositories": {
+        "sd": "rossiyareich/abyssorangemix3-popupparade-fp16",
+        "vae": "rossiyareich/abyssorangemix3-vae"
+    },
+    "diffusion": {
+        "base_prompt": "make her a fully clothed figurine standing upright {0} with fists and a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})+, (1girl, fists, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)",
+        "base_neg_prompt": "easynegative, badhandv4, verybadimagenegative_v1.3, worst quality, low quality, logo, text, watermark, username",
+        "num_inference_steps": 20,
+        "guidance_scale": 12.0,
+        "seed": null,
+        "same_frame_noise": false,
+        "length": 100,
+        "controlnets": {
+            "scales": [1.0, 1.0],
+            "exp": 0.85,
+            "pipe": {
+                "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
+                "albedo": "lllyasviel/control_v11e_sd15_ip2p"
+            }
+        },
+        "additions": [
+            {
+                "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                "add_prompt": ["viewed from the front", "front view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                "add_prompt": ["viewed at an angle", "front view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+                "add_prompt": ["viewed from the side", "side view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+                "add_prompt": ["viewed at an angle", "back view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [40, 41, 42, 43, 44, 45, 46, 47, 48, 49],
+                "add_prompt": ["viewed from the back", "back view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+                "add_prompt": ["viewed from the back", "back view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [60, 61, 62, 63, 64, 65, 66, 67, 68, 69],
+                "add_prompt": ["viewed at an angle", "back view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [70, 71, 72, 73, 74, 75, 76, 77, 78, 79],
+                "add_prompt": ["viewed from the side", "side view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [80, 81, 82, 83, 84, 85, 86, 87, 88, 89],
+                "add_prompt": ["viewed at an angle", "front view"],
+                "add_neg_prompt": []
+            },
+            {
+                "frames": [90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
+                "add_prompt": ["viewed from the front", "front view"],
+                "add_neg_prompt": []
+            }
+        ]
+    },
+    "upscale": {
+        "outscale": 4.0,
+        "tile": 192,
+        "tile_pad": 10,
+        "pre_pad": 10,
+        "face_enhance": true,
+        "fp32": false,
+        "gpu_id": 0
+    },
+    "groundedsam": {
+        "device": "cuda",
+        "scale": 0.5,
+        "length": 100,
+        "detection": [
+            {
+                "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [10, 11, 12, 13, 14, 15, 16, 17, 18, 19],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [20, 21, 22, 23, 24, 25, 26, 27, 28, 29],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [30, 31, 32, 33, 34, 35, 36, 37, 38, 39],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [40, 41, 42, 43, 44, 45, 46, 47, 48, 49],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [50, 51, 52, 53, 54, 55, 56, 57, 58, 59],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [60, 61, 62, 63, 64, 65, 66, 67, 68, 69],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [70, 71, 72, 73, 74, 75, 76, 77, 78, 79],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [80, 81, 82, 83, 84, 85, 86, 87, 88, 89],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            },
+            {
+                "frames": [90, 91, 92, 93, 94, 95, 96, 97, 98, 99],
+                "prompt": "girl",
+                "box_threshold": 0.3,
+                "text_threshold": 0.25
+            }
+        ]
+    }
+}

@@ -145,7 +145,7 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         solver_type: str = "midpoint",
         lower_order_final: bool = True,
         use_karras_sigmas: Optional[bool] = False,
-        num_indices: int = 1,
+        num_frames: int = 1,
     ):
         if trained_betas is not None:
             self.betas = torch.tensor(trained_betas, dtype=torch.float32)
@@ -205,8 +205,8 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
             0, num_train_timesteps - 1, num_train_timesteps, dtype=np.float32
         )[::-1].copy()
         self.timesteps = torch.from_numpy(timesteps)
-        self.model_outputs = [[None] * solver_order for _ in range(num_indices)]
-        self.lower_order_nums = [0] * num_indices
+        self.model_outputs = [[None] * solver_order for _ in range(num_frames)]
+        self.lower_order_nums = [0] * num_frames
         self.use_karras_sigmas = use_karras_sigmas
 
     def set_timesteps(
@@ -249,9 +249,9 @@ class DPMSolverMultistepScheduler(SchedulerMixin, ConfigMixin):
         self.num_inference_steps = len(timesteps)
 
         self.model_outputs = [
-            [None] * self.config.solver_order for _ in range(self.config.num_indices)
+            [None] * self.config.solver_order for _ in range(self.config.num_frames)
         ]
-        self.lower_order_nums = [0] * self.config.num_indices
+        self.lower_order_nums = [0] * self.config.num_frames
 
     def _threshold_sample(self, sample: torch.FloatTensor) -> torch.FloatTensor:
         """
