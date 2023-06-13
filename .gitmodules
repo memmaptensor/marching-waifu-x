@@ -4,6 +4,6 @@
 [submodule "ext/Grounded-Segment-Anything"]
 	path = ext/Grounded-Segment-Anything
 	url = https://github.com/IDEA-Research/Grounded-Segment-Anything.git
-[submodule "ext/nvdiffrec"]
-	path = ext/nvdiffrec
-	url = https://github.com/NVlabs/nvdiffrec.git
+[submodule "ext/instant-ngp"]
+	path = ext/instant-ngp
+	url = https://github.com/nvlabs/instant-ngp
