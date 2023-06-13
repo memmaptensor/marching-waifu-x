@@ -31,7 +31,7 @@ if __name__ == "__main__":
     img_emb = model.encode(PIL.Image.open(conf["paths"]["image"]))
 
     # Encode text descriptions
-    text_emb = model.encode([f"{args.text}"])
+    text_emb = model.encode([conf["evaluation"]["text"]])
 
     # Compute cosine similarities
     cos_scores = util.cos_sim(img_emb, text_emb)
