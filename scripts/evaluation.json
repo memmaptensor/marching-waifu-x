@@ -1,0 +1,10 @@
+{
+    "paths": {
+        "image": "../data/dataset/ngp_trained/0001.png",
+        "checkpoints_path": "../data/checkpoints/"
+    },
+    "evaluation": {
+        "text": "a 3d model of a girl",
+        "clip": "clip-ViT-B-32"
+    }
+}

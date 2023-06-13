@@ -6,7 +6,7 @@
     </a>
 </p>
 
-Complete 3D character generation based on ControlVideo, GroundingDINO, SegmentAnything, and nvdiffrec
+Complete 3D character generation based on ControlVideo, GroundingDINO, SegmentAnything, and InstantNGP
 
 - End-To-End
 <br>[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rossiyareich/marching-waifu-x/blob/main/ipynb/end2end_colab.ipynb)
@@ -14,14 +14,14 @@ Complete 3D character generation based on ControlVideo, GroundingDINO, SegmentAn
 ## Related resources:
 - [huggingface/diffusers](https://github.com/huggingface/diffusers)
     - [rossiyareich/abyssorangemix3-popupparade-fp16](https://huggingface.co/rossiyareich/abyssorangemix3-popupparade-fp16)
-    - [rossiyareich/abyssorangemix3-vae](https://huggingface.co/rossiyareich/abyssorangemix3-vae)
+    - [rossiyareich/anything-v4.0-vae](https://huggingface.co/rossiyareich/anything-v4.0-vae)
     - [gsdf/EasyNegative](https://huggingface.co/datasets/gsdf/EasyNegative)
     - [AsciiP/badhandv4](https://huggingface.co/AsciiP/badhandv4)
     - [veryBadImageNegative](https://civitai.com/models/11772)
 - [YBYBZhang/ControlVideo](https://github.com/YBYBZhang/ControlVideo)
 - [xinntao/Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN)
 - [IDEA-Research/Grounded-Segment-Anything](https://github.com/IDEA-Research/Grounded-Segment-Anything)
-- [NVlabs/nvdiffrec](https://github.com/NVlabs/nvdiffrec)
+- [NVLabs/instant-ngp](https://github.com/NVlabs/instant-ngp)
 - [maximeraafat/BlenderNeRF](https://github.com/maximeraafat/BlenderNeRF)
 - [genshin-style-anime-female-base-mesh-for-blender](https://sketchfab.com/3d-models/genshin-style-anime-female-base-mesh-for-blender-c2d6727e8c9742feb9a4a3bccac6e0e0)
 - [OpenPoseBones_v9](https://toyxyz.gumroad.com/l/ciojz)
@@ -41,7 +41,5 @@ Complete 3D character generation based on ControlVideo, GroundingDINO, SegmentAn
         - [x] OpenPose
         - [x] Pix2Pix
 - [x] Fix GroundingDINO + SegmentAnything
-- [x] Add nvdiffrec
-- [ ] Add Gradio UI
-- [ ] Evaluation against stable-dreamfusion with DeepDanbooru
-- [ ] Medium article
+- [x] Add InstantNGP
+- [x] Evaluation with CLIP R-Precision

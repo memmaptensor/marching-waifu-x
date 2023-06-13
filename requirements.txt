@@ -39,3 +39,4 @@ positional-encodings
 mediapipe
 triton
 modelcards
+sentence-transformers

@@ -48,7 +48,7 @@ class groundedsam_pipeline:
         _ = model.eval()
         return model
 
-    def _load_image(image_pil):
+    def _load_image(self, image_pil):
         transform = T.Compose(
             [
                 T.RandomResize([800], max_size=1333),
