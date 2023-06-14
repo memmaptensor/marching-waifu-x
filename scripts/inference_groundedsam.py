@@ -43,7 +43,7 @@ if __name__ == "__main__":
         torch.cuda.empty_cache()
         
         # Load image
-        filepath = os.path.join(conf["paths"]["upscaled_path"], f"{(i+1):04}.png")
+        filepath = os.path.join(conf["paths"]["diffusion_output_path"], f"{(i+1):04}.png")
         image = PIL.Image.open(filepath)
 
         # Scale image
