@@ -1,9 +1,6 @@
-[submodule "ext/Real-ESRGAN"]
-	path = ext/Real-ESRGAN
-	url = https://github.com/xinntao/Real-ESRGAN.git
 [submodule "ext/Grounded-Segment-Anything"]
 	path = ext/Grounded-Segment-Anything
 	url = https://github.com/IDEA-Research/Grounded-Segment-Anything.git
-[submodule "ext/instant-ngp"]
-	path = ext/instant-ngp
-	url = https://github.com/nvlabs/instant-ngp
+[submodule "ext/nvdiffrec"]
+	path = ext/nvdiffrec
+	url = https://github.com/rossiyareich/nvdiffrec.git
