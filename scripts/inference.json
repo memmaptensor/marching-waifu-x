@@ -2,7 +2,6 @@
     "paths": {
         "diffusion_output_path": "../data/dataset/diffusion",
         "conditions_path": "../data/dataset/conditions",
-        "upscaled_path": "../data/dataset/diffusion_upscaled",
         "masked_path": "../data/dataset/ngp/train",
         "checkpoints_path": "../data/checkpoints/",
         "embeddings_path": "../data/embeddings/"
@@ -12,7 +11,7 @@
         "vae": "rossiyareich/anything-v4.0-vae"
     },
     "diffusion": {
-        "base_prompt": "make her a fully clothed figurine standing upright {0} with fists and a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})++, (1girl, fists, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)+",
+        "base_prompt": "make her a fully clothed figurine standing upright {0} with a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})++, (1girl, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)+",
         "base_neg_prompt": "easynegative, badhandv4, verybadimagenegative_v1.3, worst quality, low quality, logo, text, watermark, username",
         "num_inference_steps": 20,
         "guidance_scale": 12.0,
@@ -20,11 +19,12 @@
         "same_frame_noise": false,
         "length": 100,
         "controlnets": {
-            "scales": [1.0, 1.0],
-            "exp": 0.825,
+            "scales": [1.0, 1.0, 0.85],
+            "exp": 0.85,
             "pipe": {
                 "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
-                "albedo": "lllyasviel/control_v11e_sd15_ip2p"
+                "albedo": "lllyasviel/control_v11e_sd15_ip2p",
+                "softedge_hed": "lllyasviel/control_v11p_sd15_softedge"
             }
         },
         "additions": [
@@ -80,18 +80,9 @@
             }
         ]
     },
-    "upscale": {
-        "outscale": 4.0,
-        "tile": 192,
-        "tile_pad": 10,
-        "pre_pad": 10,
-        "face_enhance": true,
-        "fp32": false,
-        "gpu_id": 0
-    },
     "groundedsam": {
         "device": "cuda",
-        "scale": 0.5,
+        "scale": 1.0,
         "length": 100,
         "detection": [
             {

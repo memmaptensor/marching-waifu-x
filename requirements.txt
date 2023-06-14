@@ -40,3 +40,4 @@ mediapipe
 triton
 modelcards
 sentence-transformers
+gradio
