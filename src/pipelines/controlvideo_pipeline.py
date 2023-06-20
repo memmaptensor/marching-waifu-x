@@ -2,7 +2,7 @@ import gc
 import glob
 import os
 import pathlib
-from typing import List, Optional, Tuple, Union
+from typing import List, Union
 
 import PIL.Image
 import torch
@@ -12,7 +12,6 @@ from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D
-from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
 from src.controlvideo.unet import UNet3DConditionModel
 
@@ -20,7 +19,15 @@ from src.controlvideo.unet import UNet3DConditionModel
 class controlvideo_pipeline:
     @torch.no_grad()
     def __init__(
-        self, sd_repo, vae_repo, controlnet_repos, cache_dir, num_frames
+        self,
+        sd_repo,
+        vae_repo,
+        controlnet_repos,
+        cache_dir,
+        num_frames,
+        optimizations,
+        scheduler,
+        textual_inversion_path,
     ):
         # Cache model weights
         sd_path = snapshot_download(
@@ -48,13 +55,33 @@ class controlvideo_pipeline:
         # Load VAE
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
 
-        # Load scheduler
-        self.scheduler = DPMSolverMultistepScheduler.from_pretrained(
-            sd_path,
-            subfolder="scheduler",
-            use_karras_sigmas=True,
-            num_frames=num_frames,
+        # Load pipeline
+        self.pipe = ControlVideoPipeline(
+            vae=self.vae,
+            text_encoder=self.text_encoder,
+            tokenizer=self.tokenizer,
+            unet=self.unet,
+            controlnet=self.controlnet,
         )
+
+        # Load scheduler
+        if scheduler == "unipcsolver_multistep":
+            from src.controlvideo.unipcsolver_multistep import (
+                UniPCSolverMultistepScheduler,
+            )
+
+            self.scheduler = UniPCSolverMultistepScheduler.from_config(
+                self.pipe.scheduler.config,
+                num_frames=num_frames,
+            )
+        elif scheduler == "dpmsolver_multistep":
+            from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
+
+            self.scheduler = DPMSolverMultistepScheduler.from_config(
+                self.pipe.scheduler.config,
+                use_karras_sigmas=True,
+                num_frames=num_frames,
+            )
 
         # Load main UNet
         self.unet = UNet3DConditionModel.from_pretrained_2d(
@@ -69,10 +96,36 @@ class controlvideo_pipeline:
             for controlnet_path in controlnet_paths
         ]
 
+        # Load textual inversions
+        for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
+            pl = pathlib.Path(filepath)
+            if pl.suffix in [".safetensors", ".ckpt", ".pt"]:
+                self.pipe.load_textual_inversion(
+                    filepath,
+                    token=pl.stem,
+                    use_safetensors=(pl.suffix == ".safetensors"),
+                )
+
+        # Load pipeline optimizations
+        assert not (
+            "model_cpu_offload" in optimizations
+            and "sequential_cpu_offload" in optimizations
+        )
+        for optimization in optimizations:
+            if optimization == "vae_slicing":
+                self.pipe.enable_vae_slicing()
+            elif optimization == "xformers":
+                self.pipe.enable_xformers_memory_efficient_attention()
+            elif optimization == "cuda":
+                self.pipe.to("cuda")
+            elif optimization == "model_cpu_offload":
+                self.pipe.enable_model_cpu_offload()
+            elif optimization == "sequential_cpu_offload":
+                self.pipe.enable_sequential_cpu_offload()
+
     @torch.no_grad()
     def __call__(
         self,
-        textual_inversion_path: str,
         prompts: List[str],
         negative_prompts: List[str],
         controlnet_frames: List[List[PIL.Image.Image]],
@@ -84,33 +137,11 @@ class controlvideo_pipeline:
         guidance_scale: float = 10.0,
         eta: float = 0.0,
     ):
-        torch.cuda.empty_cache()
-
-        # Load pipeline
-        pipe = ControlVideoPipeline(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet,
-            controlnet=self.controlnet,
-            scheduler=self.scheduler,
-        )
-
-        # Load textual inversions
-        for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
-            pl = pathlib.Path(filepath)
-            if pl.suffix in [".safetensors", ".ckpt", ".pt"]:
-                pipe.load_textual_inversion(
-                    filepath,
-                    token=pl.stem,
-                    use_safetensors=(pl.suffix == ".safetensors"),
-                )
-
         # Load text encoder
-        pipe.text_encoder.to("cuda")
+        self.pipe.text_encoder.to("cuda")
         compel = Compel(
-            pipe.tokenizer,
-            pipe.text_encoder,
+            self.pipe.tokenizer,
+            self.pipe.text_encoder,
             truncate_long_prompts=False,
             device="cuda",
         )
@@ -124,17 +155,11 @@ class controlvideo_pipeline:
             for prompt, negative_prompt in zip(prompts, negative_prompts)
         ]
         del compel
-        pipe.text_encoder.to("cpu")
+        self.pipe.text_encoder.to("cpu")
+        gc.collect()
         torch.cuda.empty_cache()
 
-        # Load pipeline optimizations
-        pipe.enable_vae_slicing()
-        pipe.enable_xformers_memory_efficient_attention()
-        pipe.to("cuda")
-        # pipe.enable_model_cpu_offload()
-        # pipe.enable_sequential_cpu_offload()
-
-        video = pipe.generate_long_video(
+        video = self.pipe.generate_long_video(
             frame_wembeds,
             controlnet_frames,
             controlnet_scales,

@@ -1,4 +1,5 @@
 import argparse
+import glob
 import json
 
 import PIL.Image
@@ -27,12 +28,29 @@ if __name__ == "__main__":
         conf["evaluation"]["clip"], cache_folder=conf["paths"]["checkpoints_path"]
     )
 
-    # Encode an image
-    img_emb = model.encode(PIL.Image.open(conf["paths"]["image"]))
-
     # Encode text descriptions
     text_emb = model.encode([conf["evaluation"]["text"]])
 
-    # Compute cosine similarities
-    cos_scores = util.cos_sim(img_emb, text_emb)
-    print("The final CLIP R-Precision is:", cos_scores[0][0].cpu().numpy())
+    # Output R-Precision for training set images
+    training_set_glob = sorted(glob.glob(conf["paths"]["training_images"]))
+    training_set_r_precision = 0
+    for i, filepath in enumerate(training_set_glob):
+        img_emb = model.encode(PIL.Image.open(filepath))
+        cos_scores = util.cos_sim(img_emb, text_emb)
+        r_precision = cos_scores[0][0].cpu().numpy()
+        print(f"Training set CLIP R-Precision: {i}, {r_precision}")
+        training_set_r_precision += r_precision
+    training_set_r_precision /= len(training_set_glob)
+    print(f"Training set final CLIP R-Precision: {training_set_r_precision}")
+
+    # Output R-Precision for rendered images
+    rendered_set_glob = sorted(glob.glob(conf["paths"]["rendered_images"]))
+    rendered_set_r_precision = 0
+    for i, filepath in enumerate(rendered_set_glob):
+        img_emb = model.encode(PIL.Image.open(filepath))
+        cos_scores = util.cos_sim(img_emb, text_emb)
+        r_precision = cos_scores[0][0].cpu().numpy()
+        print(f"Rendered set CLIP R-Precision: {i}, {r_precision}")
+        rendered_set_r_precision += r_precision
+    rendered_set_r_precision /= len(rendered_set_glob)
+    print(f"Rendered set final CLIP R-Precision: {rendered_set_r_precision}")

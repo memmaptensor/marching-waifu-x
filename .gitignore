@@ -1,8 +1,5 @@
 data/checkpoints/*
 data/dataset/diffusion/*
-data/dataset/diffusion_upscaled/*
 data/dataset/ngp/*
 !data/dataset/ngp/transforms*.json
-!data/dataset/ngp/base_cam*.json
-data/dataset/ngp_trained/*
 __pycache__

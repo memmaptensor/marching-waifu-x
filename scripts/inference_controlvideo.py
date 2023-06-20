@@ -48,6 +48,9 @@ if __name__ == "__main__":
         controlnet_repositories,
         conf["paths"]["checkpoints_path"],
         conf["diffusion"]["length"],
+        conf["diffusion"]["optimizations"],
+        conf["diffusion"]["scheduler"],
+        conf["paths"]["embeddings_path"],
     )
 
     # Load video attributes
@@ -85,7 +88,6 @@ if __name__ == "__main__":
 
     # Inference
     video = pipe(
-        conf["paths"]["embeddings_path"],
         prompts,
         negative_prompts,
         controlnet_conditions,

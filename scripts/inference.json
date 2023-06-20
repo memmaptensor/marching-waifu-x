@@ -3,8 +3,8 @@
         "diffusion_output_path": "../data/dataset/diffusion",
         "conditions_path": "../data/dataset/conditions",
         "masked_path": "../data/dataset/ngp/train",
-        "checkpoints_path": "../data/checkpoints/",
-        "embeddings_path": "../data/embeddings/"
+        "checkpoints_path": "../data/checkpoints",
+        "embeddings_path": "../data/embeddings"
     },
     "repositories": {
         "sd": "rossiyareich/abyssorangemix3-popupparade-fp16",
@@ -13,20 +13,22 @@
     "diffusion": {
         "base_prompt": "make her a fully clothed figurine standing upright {0} with a slight smile and short blue hair and cute aqua eyes and bangs wearing a white hoodie and blue jeans and blue sneakers, (masterpiece, best quality, {1})++, (1girl, slight smile, white hoodie, blue jeans, blue sneakers, short blue hair, aqua eyes, bangs)+",
         "base_neg_prompt": "easynegative, badhandv4, verybadimagenegative_v1.3, worst quality, low quality, logo, text, watermark, username",
-        "num_inference_steps": 20,
+        "num_inference_steps": 10,
         "guidance_scale": 12.0,
         "seed": null,
         "same_frame_noise": false,
         "length": 100,
         "controlnets": {
-            "scales": [1.0, 1.0, 0.85],
-            "exp": 0.85,
+            "scales": [1.0, 1.0, 0.825],
+            "exp": 0.825,
             "pipe": {
                 "openpose_full": "lllyasviel/control_v11p_sd15_openpose",
                 "albedo": "lllyasviel/control_v11e_sd15_ip2p",
                 "softedge_hed": "lllyasviel/control_v11p_sd15_softedge"
             }
         },
+        "optimizations": ["vae_slicing", "xformers", "model_cpu_offload"],
+        "scheduler": "unipcsolver_multistep",
         "additions": [
             {
                 "frames": [0, 1, 2, 3, 4, 5, 6, 7, 8, 9],

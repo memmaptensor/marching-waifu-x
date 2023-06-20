@@ -49,8 +49,6 @@ class MultiControlNetModel3D(ModelMixin):
         for i, (image, scale, controlnet) in enumerate(
             zip(controlnet_cond, conditioning_scale, self.nets)
         ):
-            torch.cuda.empty_cache()
-
             down_samples, mid_sample = controlnet(
                 sample,
                 timestep,
@@ -354,8 +352,6 @@ class ControlVideoPipeline(
         num_warmup_steps = len(timesteps) - num_inference_steps * self.scheduler.order
         with self.progress_bar(total=num_inference_steps) as progress_bar:
             for i, t in enumerate(timesteps):
-                torch.cuda.empty_cache()
-
                 # Expand latents for CFG
                 latent_model_input = torch.cat([latents] * 2)
                 latent_model_input = self.scheduler.scale_model_input(
@@ -365,8 +361,6 @@ class ControlVideoPipeline(
                 pred_original_sample = torch.zeros_like(latents)
 
                 for frame_n in range(video_length):
-                    torch.cuda.empty_cache()
-
                     if frame_n == 0:
                         frames = [0]
                         focus_rel = 0

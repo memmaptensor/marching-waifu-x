@@ -90,8 +90,6 @@ class groundedsam_pipeline:
 
     @torch.no_grad()
     def __call__(self, image_pil, prompt, box_threshold, text_threshold):
-        torch.cuda.empty_cache()
-
         image_source, image = self._load_image(image_pil)
         detected_boxes = self._detect(image, prompt, box_threshold, text_threshold)
         segmented_frame_masks = self._segment(image_source, detected_boxes)
