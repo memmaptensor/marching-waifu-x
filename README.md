@@ -37,7 +37,7 @@ We first explore existing Text-to-video and Text-to-3D works, along with additio
 **nvdiffrec** is a multi-stage pipeline for joint optimization of topology, materials and lighting from multi-view image observations. Unlike other multi-view reconstruction approaches, which typically produce entangled 3D representations encoded in neural networks, **nvdiffrec** outputs triangle meshes with spatially-varying materials and environment lighting that can be deployed in any traditional graphics engine unmodified.
 
 ## Pipeline and architecture
-<p>marching-waifu-x utilizes a multi-stage pipeline for 3D character generation; mainly consisting of two stages-- Text-to-Video and Video-to-3D.</p>
+**marching-waifu-x** utilizes a multi-stage pipeline for 3D character generation; mainly consisting of two stages-- Text-to-Video and Video-to-3D.
 
 **(1) Text-to-Video**<br>
 We adapt the following techniques to achieve generations from latent diffusion models with temporal consistency from ControlVideo:
