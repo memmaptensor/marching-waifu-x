@@ -17,7 +17,7 @@ Medium write-up: [Diffusion models are zero-shot 3D character generators, too](h
 - [Limitations](#limitations)
 - [Usage](#usage)
 - [Future improvements](#future-improvements)
-- [Related resources](#related-links)
+- [Related resources](#related-resources)
 - [References](#references)
 
 ## Introduction
