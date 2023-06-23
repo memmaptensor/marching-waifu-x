@@ -109,7 +109,7 @@ We adapt the following techniques to achieve generations from latent diffusion m
 ## Future improvements
 `TBD`
 
-## Related links
+## Related resources
 - [huggingface/diffusers](https://github.com/huggingface/diffusers)
     - [rossiyareich/abyssorangemix3-popupparade-fp16](https://huggingface.co/rossiyareich/abyssorangemix3-popupparade-fp16)
     - [rossiyareich/anything-v4.0-vae](https://huggingface.co/rossiyareich/anything-v4.0-vae)
