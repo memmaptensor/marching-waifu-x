@@ -1,13 +1,9 @@
 # marching-waifu-x 💖
 
-<p>
-    <a href="https://github.com/rossiyareich/marching-waifu-x/blob/main/LICENSE">
-        <img alt="GitHub" src="https://img.shields.io/github/license/rossiyareich/marching-waifu-x">
-    </a>
-</p>
+[![License](https://img.shields.io/github/license/rossiyareich/marching-waifu-x)](https://github.com/rossiyareich/marching-waifu-x/blob/main/LICENSE)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rossiyareich/marching-waifu-x/blob/main/ipynb/end2end_colab.ipynb)
 
-Google Colabatory: [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/rossiyareich/marching-waifu-x/blob/main/ipynb/end2end_colab.ipynb)<br>
-Medium write-up: [Diffusion models are zero-shot 3D character generators, too](https://medium.com/@rwussiya/diffusion-models-are-zero-shot-3d-character-generators-too-6261c264755c)<br>
+Medium write-up: [Diffusion models are zero-shot 3D character generators, too](https://medium.com/@rwussiya/diffusion-models-are-zero-shot-3d-character-generators-too-6261c264755c)
 
 ## Updates
 * [20/06/2023] Added UniPC scheduler
