@@ -5,11 +5,6 @@
 
 Medium write-up: [Diffusion models are zero-shot 3D character generators, too](https://medium.com/@rwussiya/diffusion-models-are-zero-shot-3d-character-generators-too-6261c264755c)
 
-## Updates
-* [20/06/2023] Added UniPC scheduler
-* [15/06/2023] First medium write-up
-* [15/06/2023] First working release
-
 ## Table of Contents
 - [Introduction](#introduction)
 - [Preliminary works](#preliminary-works)
@@ -73,32 +68,39 @@ We adapt the following techniques to achieve generations from latent diffusion m
     - We found the effects of deflickering to not impact the training of **InstantNGP** by a large factor
 
 **(2) Video-to-3D**<br>
-- We utilize nvdiffrec for extracting diffuse, specular, and normal maps along with the character mesh from the synthetic 2D image dataset
-- Default training parameters are as follows:
-    ```json
-    {
-        "ref_mesh": "data/ngp",
-        "random_textures": true,
-        "iter": 2500,
-        "save_interval": 500,
-        "texture_res": [2048, 2048],
-        "train_res": [1024, 768],
-        "batch": 4,
-        "learning_rate": [0.03, 0.01],
-        "ks_min" : [0, 0.08, 0.0],
-        "dmtet_grid" : 128,
-        "mesh_scale" : 2.0,
-        "laplace_scale" : 2500,
-        "display": [
-            {"latlong" : true}, 
-            {"bsdf" : "kd"}, 
-            {"bsdf" : "ks"}, 
-            {"bsdf" : "normal"}
-        ],
-        "background" : "white",
-        "out_dir": "output"
-    }
-    ```
+- instant-ngp
+    - Training parameters are as follows:
+        ```
+        sharpen = 1.0
+        n_steps = 5000
+        ```
+- nvdiffrec
+    - We utilize nvdiffrec for extracting diffuse, specular, and normal maps along with the character mesh from the synthetic 2D image dataset
+    - Default training parameters are as follows:
+        ```json
+        {
+            "ref_mesh": "data/ngp",
+            "random_textures": true,
+            "iter": 2500,
+            "save_interval": 500,
+            "texture_res": [2048, 2048],
+            "train_res": [1024, 768],
+            "batch": 4,
+            "learning_rate": [0.03, 0.01],
+            "ks_min" : [0, 0.08, 0.0],
+            "dmtet_grid" : 128,
+            "mesh_scale" : 2.0,
+            "laplace_scale" : 2500,
+            "display": [
+                {"latlong" : true}, 
+                {"bsdf" : "kd"}, 
+                {"bsdf" : "ks"}, 
+                {"bsdf" : "normal"}
+            ],
+            "background" : "white",
+            "out_dir": "output"
+        }
+        ```
 
 ## Limitations
 `TBD`
