@@ -79,7 +79,7 @@ We adapt the following techniques to achieve generations from latent diffusion m
     - Default training parameters are as follows:
         ```json
         {
-            "ref_mesh": "data/ngp",
+            "ref_mesh": "data/nerf",
             "random_textures": true,
             "iter": 2500,
             "save_interval": 500,
@@ -98,7 +98,7 @@ We adapt the following techniques to achieve generations from latent diffusion m
                 {"bsdf" : "normal"}
             ],
             "background" : "white",
-            "out_dir": "output"
+            "out_dir": "nerf_output"
         }
         ```
 
