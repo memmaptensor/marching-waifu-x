@@ -49,7 +49,6 @@ if __name__ == "__main__":
         conf["paths"]["checkpoints_path"],
         conf["diffusion"]["length"],
         conf["diffusion"]["optimizations"],
-        conf["diffusion"]["scheduler"],
         conf["paths"]["embeddings_path"],
     )
 

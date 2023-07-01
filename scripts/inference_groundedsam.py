@@ -41,9 +41,11 @@ if __name__ == "__main__":
     # Load images
     for i in range(conf["groundedsam"]["length"]):
         torch.cuda.empty_cache()
-        
+
         # Load image
-        filepath = os.path.join(conf["paths"]["diffusion_output_path"], f"{(i+1):04}.png")
+        filepath = os.path.join(
+            conf["paths"]["diffusion_output_path"], f"{(i+1):04}.png"
+        )
         image = PIL.Image.open(filepath)
 
         # Scale image
@@ -61,11 +63,12 @@ if __name__ == "__main__":
         # Mask alpha
         mask = image_wrapper(mask.convert("L"), "pil")
         mask = mask.scale(1.0 / conf["groundedsam"]["scale"]).to_pil()
-        masked = image
-        masked.putalpha(mask)
+        image.putalpha(mask)
+        masked = PIL.Image.new("RGBA", image.size, "WHITE")
+        masked.paste(image, (0, 0), image)
 
         # Save results
-        masked.save(
+        image.save(
             os.path.join(
                 conf["paths"]["masked_path"],
                 f"{(i+1):04}.png",

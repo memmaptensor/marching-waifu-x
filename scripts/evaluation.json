@@ -1,11 +1,11 @@
-{
-    "paths": {
-        "training_images": "../data/dataset/ngp/train/*.png",
-        "rendered_images": "../ext/nvdiffrec/output/opt*.png",
-        "checkpoints_path": "../data/checkpoints"
-    },
-    "evaluation": {
-        "text": "a 3d model of a girl",
-        "clip": "sentence-transformers/clip-ViT-B-32"
+[
+    {
+        "paths": {
+            "checkpoints_path": "../data/checkpoints"
+        },
+        "evaluation": {
+            "text": "a 3d model of a girl",
+            "clip": "sentence-transformers/clip-ViT-B-32"
+        }
     }
-}
+]

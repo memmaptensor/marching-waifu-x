@@ -1,5 +1,9 @@
 data/checkpoints/*
 data/dataset/diffusion/*
+data/dataset/nerf/*
+!data/dataset/nerf/*.json
+data/dataset/nerf_output/*
 data/dataset/ngp/*
-!data/dataset/ngp/transforms*.json
+!data/dataset/ngp/*.json
+data/dataset/ngp_output/*
 __pycache__

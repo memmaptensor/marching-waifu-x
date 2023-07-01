@@ -4,3 +4,6 @@
 [submodule "ext/nvdiffrec"]
 	path = ext/nvdiffrec
 	url = https://github.com/rossiyareich/nvdiffrec.git
+[submodule "ext/instant-ngp"]
+	path = ext/instant-ngp
+	url = https://github.com/nvlabs/instant-ngp

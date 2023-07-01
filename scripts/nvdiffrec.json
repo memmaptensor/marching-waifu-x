@@ -1,5 +1,5 @@
 {
-    "ref_mesh": "data/ngp",
+    "ref_mesh": "data/nerf",
     "random_textures": true,
     "iter": 2500,
     "save_interval": 500,
@@ -18,5 +18,5 @@
         {"bsdf" : "normal"}
     ],
     "background" : "white",
-    "out_dir": "output"
+    "out_dir": "nerf_output"
 }

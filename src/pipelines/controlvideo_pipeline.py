@@ -12,6 +12,7 @@ from huggingface_hub import snapshot_download
 from transformers import CLIPTextModel, CLIPTokenizer
 
 from src.controlvideo.controlnet import ControlNetModel3D
+from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
 from src.controlvideo.pipeline_controlvideo import ControlVideoPipeline
 from src.controlvideo.unet import UNet3DConditionModel
 
@@ -26,7 +27,6 @@ class controlvideo_pipeline:
         cache_dir,
         num_frames,
         optimizations,
-        scheduler,
         textual_inversion_path,
     ):
         # Cache model weights
@@ -55,34 +55,6 @@ class controlvideo_pipeline:
         # Load VAE
         self.vae = AutoencoderKL.from_pretrained(vae_path).to(dtype=torch.float16)
 
-        # Load pipeline
-        self.pipe = ControlVideoPipeline(
-            vae=self.vae,
-            text_encoder=self.text_encoder,
-            tokenizer=self.tokenizer,
-            unet=self.unet,
-            controlnet=self.controlnet,
-        )
-
-        # Load scheduler
-        if scheduler == "unipcsolver_multistep":
-            from src.controlvideo.unipcsolver_multistep import (
-                UniPCSolverMultistepScheduler,
-            )
-
-            self.scheduler = UniPCSolverMultistepScheduler.from_config(
-                self.pipe.scheduler.config,
-                num_frames=num_frames,
-            )
-        elif scheduler == "dpmsolver_multistep":
-            from src.controlvideo.dpmsolver_multistep import DPMSolverMultistepScheduler
-
-            self.scheduler = DPMSolverMultistepScheduler.from_config(
-                self.pipe.scheduler.config,
-                use_karras_sigmas=True,
-                num_frames=num_frames,
-            )
-
         # Load main UNet
         self.unet = UNet3DConditionModel.from_pretrained_2d(
             sd_path, subfolder="unet", use_safetensors=True
@@ -95,6 +67,24 @@ class controlvideo_pipeline:
             ).to(dtype=torch.float16)
             for controlnet_path in controlnet_paths
         ]
+
+        # Load scheduler
+        self.scheduler = DPMSolverMultistepScheduler.from_pretrained(
+            sd_path,
+            subfolder="scheduler",
+            use_karras_sigmas=True,
+            num_frames=num_frames,
+        )
+
+        # Load pipeline
+        self.pipe = ControlVideoPipeline(
+            vae=self.vae,
+            text_encoder=self.text_encoder,
+            tokenizer=self.tokenizer,
+            unet=self.unet,
+            controlnet=self.controlnet,
+            scheduler=self.scheduler,
+        )
 
         # Load textual inversions
         for filepath in sorted(glob.glob(os.path.join(textual_inversion_path, "*"))):
