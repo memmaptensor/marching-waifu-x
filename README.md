@@ -9,11 +9,7 @@ Medium write-up: [Diffusion models are zero-shot 3D character generators, too](h
 - [Introduction](#introduction)
 - [Preliminary works](#preliminary-works)
 - [Pipeline and architecture](#pipeline-and-architecture)
-- [Limitations](#limitations)
-- [Usage](#usage)
-- [Future improvements](#future-improvements)
 - [Related resources](#related-resources)
-- [References](#references)
 
 ## Introduction
 Source repository of "marching-waifu-x 💖: Diffusion models are zero-shot 3D character generators, too"
@@ -102,15 +98,6 @@ We adapt the following techniques to achieve generations from latent diffusion m
         }
         ```
 
-## Limitations
-`TBD`
-
-## Usage
-`TBD`
-
-## Future improvements
-`TBD`
-
 ## Related resources
 - [huggingface/diffusers](https://github.com/huggingface/diffusers)
     - [rossiyareich/abyssorangemix3-popupparade-fp16](https://huggingface.co/rossiyareich/abyssorangemix3-popupparade-fp16)
@@ -122,6 +109,3 @@ We adapt the following techniques to achieve generations from latent diffusion m
 - [maximeraafat/BlenderNeRF](https://github.com/maximeraafat/BlenderNeRF)
 - [genshin-style-anime-female-base-mesh-for-blender](https://sketchfab.com/3d-models/genshin-style-anime-female-base-mesh-for-blender-c2d6727e8c9742feb9a4a3bccac6e0e0)
 - [OpenPoseBones_v9](https://toyxyz.gumroad.com/l/ciojz)
-
-## References
-`TBD`
