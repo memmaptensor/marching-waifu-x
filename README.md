@@ -53,11 +53,10 @@ We adapt the following techniques to achieve generations from latent diffusion m
         - The rest of the frames are generated with the first frame and the previous frame
         - The memory complexity is similiar to that of generating 1, 2, and 3 frames in a batch. This complexity, however, does not depend on the video length
         - We found this generation scheme to be as consistent as fully cross-frame generation, while allowing generations of infinitely long videos
-- We adopt two higher-order schedulers-- UniPC and Multistep DPM++
+- We adopt a higher-order scheduler-- Multistep DPM++
     - Using less timesteps reduces total generation time for the pipeline
     - **ControlVideo** utilizes a DDIM scheduler, requiring at least 50-100 timesteps for producing high-quality samples
     - Multistep DPM++ allows generation of high-quality samples using 20 timesteps
-    - UniPC allows generation of high-quality samples using 10-15 timesteps, although using 20 timesteps, the sample results are not comparable to that of Multistep DPM++
 - We remove the IF-Net/RIFE model from the denoising loop
     - The authors of **ControlVideo** introduced the interleaved-frame smoother model to reduce flickering within the results
     - With the IF-Net, visible flickers are mediated-- though, this has the side effect of desaturating the output results
