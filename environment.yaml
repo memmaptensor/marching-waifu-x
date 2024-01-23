@@ -1,16 +1,9 @@
 name: marching-waifu-x
 channels:
   - defaults
-  - pytorch
-  - nvidia
 dependencies:
   - python=3.10
   - pip
-  - pytorch
-  - torchvision
-  - torchaudio
-  - torchtext
-  - pytorch-cuda=11.8
   - pip:
       - compel
       - safetensors
